@@ -3,12 +3,12 @@ variable "region" {
   default = "us-east-1"
 }
 
-variable "destination_bucket" {
+variable "source_bucket" {
   type    = string
   default = "theplayer007-mediaconvert-source"
 }
 
-variable "source_bucket" {
+variable "destination_bucket" {
   type    = string
   default = "theplayer007-mediaconvert-destination"
 }

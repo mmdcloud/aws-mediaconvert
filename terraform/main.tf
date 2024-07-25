@@ -52,11 +52,13 @@ data "aws_iam_policy_document" "mediaconvert-sns-topic-policy" {
 # S3 bucket for media convert upload
 resource "aws_s3_bucket" "mediaconvert-source" {
   bucket = var.source_bucket
+  force_destroy = true 
 }
 
 # S3 bucket to store converted media assets
 resource "aws_s3_bucket" "mediaconvert-destination" {
   bucket = var.destination_bucket
+  force_destroy = true
 }
 
 # MediaConvert role to call S3 APIs on your behalf.
@@ -89,7 +91,7 @@ resource "aws_iam_policy" "mediaconvert-policy" {
         "Effect": "Allow",
         "Action": [
                 "s3:*",
-                "s3-object-lambda:*"
+                "s3-object-lambda:*"	
             ],
             "Resource": "*"
         }
@@ -136,11 +138,35 @@ resource "aws_iam_policy" "mediaconvert-function-policy" {
         "Action": [
         "logs:CreateLogGroup",
         "logs:CreateLogStream",
-        "logs:PutLogEvents"
+        "logs:PutLogEvents",
+        "mediaconvert:*"
         ],
         "Resource": "arn:aws:logs:*:*:*",
         "Effect": "Allow"
-    }
+    },
+    {
+            "Effect": "Allow",
+            "Action": [
+                "mediaconvert:*",
+                "s3:ListAllMyBuckets",
+                "s3:ListBucket"
+            ],
+            "Resource": "*"
+        },
+        {
+            "Effect": "Allow",
+            "Action": [
+                "iam:PassRole"
+            ],
+            "Resource": "*",
+            "Condition": {
+                "StringLike": {
+                    "iam:PassedToService": [
+                        "mediaconvert.amazonaws.com"
+                    ]
+                }
+            }
+        }
     ]
     }
     EOF
