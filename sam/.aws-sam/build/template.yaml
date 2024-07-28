@@ -1,0 +1,81 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Resources:
+  ThePlayer007MediaConvertSource:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: theplayer007-mediaconvert-source
+  ThePlayer007MediaConvertDestination:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: theplayer007-mediaconvert-destination
+  MediaConvertSnsTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: mediaconvert-sns-topic
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: lambda.amazonaws.com
+          Action: sts:AssumeRole
+      Policies:
+      - PolicyName: MyLambdaPolicy
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - logs:CreateLogGroup
+            - logs:CreateLogStream
+            - logs:PutLogEvents
+            Resource: arn:aws:logs:*:*:*
+  MediaConvertRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: mediaconvert.amazonaws.com
+          Action: sts:AssumeRole
+      Policies:
+      - PolicyName: MediaConvertPolicy
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - s3:*
+            - s3-object-lambda:*
+            Resource: '*'
+  MediaConvertFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: lambda_function.lambda_handler
+      Runtime: python3.10
+      CodeUri: ../../../terraform/lambda_function.zip
+      Role:
+        Fn::GetAtt:
+        - LambdaExecutionRole
+        - Arn
+      Environment:
+        Variables:
+          DestinationBucket:
+            Ref: ThePlayer007MediaConvertDestination
+          MediaConvertRole:
+            Fn::GetAtt:
+            - MediaConvertRole
+            - Arn
+      Events:
+        S3Event:
+          Type: S3
+          Properties:
+            Bucket:
+              Ref: ThePlayer007MediaConvertSource
+            Events: s3:ObjectCreated:*

@@ -51,13 +51,13 @@ data "aws_iam_policy_document" "mediaconvert-sns-topic-policy" {
 
 # S3 bucket for media convert upload
 resource "aws_s3_bucket" "mediaconvert-source" {
-  bucket = var.source_bucket
-  force_destroy = true 
+  bucket        = var.source_bucket
+  force_destroy = true
 }
 
 # S3 bucket to store converted media assets
 resource "aws_s3_bucket" "mediaconvert-destination" {
-  bucket = var.destination_bucket
+  bucket        = var.destination_bucket
   force_destroy = true
 }
 
