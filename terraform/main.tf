@@ -6,6 +6,9 @@ locals {
 # SNS Topic for notifying users about the state changes in MediaConvert Job
 resource "aws_sns_topic" "mediaconvert-sns-topic" {
   name = "mediaconvert-sns-topic"
+  tags = {
+	Name = var.application_name
+  }
 }
 
 # SNS Subscription
@@ -27,6 +30,9 @@ resource "aws_cloudwatch_event_rule" "mediaconvert-job-state-change-rule" {
       "MediaConvert Job State Change"
     ]
   })
+  tags = {
+        Name = var.application_name
+  }
 }
 
 # EventBridge Target Configuration
@@ -53,12 +59,18 @@ data "aws_iam_policy_document" "mediaconvert-sns-topic-policy" {
 resource "aws_s3_bucket" "mediaconvert-source" {
   bucket        = var.source_bucket
   force_destroy = true
+  tags = {
+        Name = var.application_name
+  }
 }
 
 # S3 bucket to store converted media assets
 resource "aws_s3_bucket" "mediaconvert-destination" {
   bucket        = var.destination_bucket
   force_destroy = true
+  tags = {
+        Name = var.application_name
+  }
 }
 
 # MediaConvert role to call S3 APIs on your behalf.
@@ -78,6 +90,9 @@ resource "aws_iam_role" "mediaconvert-role" {
     ]
     }
     EOF
+  tags = {
+        Name = var.application_name
+  }
 }
 
 # MediaConvert policy to call S3 APIs on your behalf.
@@ -98,6 +113,9 @@ resource "aws_iam_policy" "mediaconvert-policy" {
     ]
     }
     EOF
+  tags = {
+        Name = var.application_name
+  }
 }
 
 # MediaConvert policy attachment to call S3 APIs on your behalf.
@@ -124,6 +142,9 @@ resource "aws_iam_role" "mediaconvert-function-role" {
     ]
     }
     EOF
+  tags = {
+        Name = var.application_name
+  }
 }
 
 # Lambda Function Policy
@@ -170,6 +191,9 @@ resource "aws_iam_policy" "mediaconvert-function-policy" {
     ]
     }
     EOF
+  tags = {
+        Name = var.application_name
+  }
 }
 
 # Lambda Function Role-Policy Attachment
@@ -211,6 +235,9 @@ resource "aws_lambda_function" "mediaconvert-function" {
       DestinationBucket = aws_s3_bucket.mediaconvert-destination.bucket
       MediaConvertRole  = aws_iam_role.mediaconvert-role.arn
     }
+  }
+  tags = {
+        Name = var.application_name
   }
 }
 
@@ -260,6 +287,9 @@ resource "aws_cloudfront_distribution" "mediaconvert_cloudfront_distribution" {
   }
   price_class     = "PriceClass_200"
   is_ipv6_enabled = false
+  tags = {
+        Name = var.application_name
+  }
 }
 
 # MediaConvert Destination Bucket to Cloudfront Access Policy

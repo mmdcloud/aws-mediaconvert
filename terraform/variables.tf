@@ -12,3 +12,8 @@ variable "destination_bucket" {
   type    = string
   default = "theplayer007-mediaconvert-destination"
 }
+
+variable "application_name" {
+    type    = string
+    default = "mediaconvert"
+}
