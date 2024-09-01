@@ -21,7 +21,7 @@ Resources:
     Properties:
       Endpoint: "mohitfury1997@gmail.com"
       Protocol: "email"
-      TopicArn: !GetAtt MediaConvertSnsTopic.Arn
+      TopicArn: !Ref MediaConvertSnsTopic
 
   MediaConvertEventBridgeEvent:
     Type: AWS::Events::Rule
@@ -36,7 +36,7 @@ Resources:
       Name: "mediaconvert-job-state-change-rule"
       RoleArn: String
       Targets:
-        - Arn: !GetAtt MediaConvertSnsTopic.Arn
+        - Arn: !Ref MediaConvertSnsTopic
           Id: "MediaConvertJobStateChange"
     
   MediaConvertLambdaExecutionRole:
@@ -167,7 +167,7 @@ Resources:
   MediaConvertDestinationBucketPolicy:
     Type: "AWS::S3::BucketPolicy"
     Properties:
-      Bucket: !Ref MediaConvertDestinationBucket
+      Bucket: !Ref ThePlayer007MediaConvertDestination
       PolicyDocument:
         Version: "2012-10-17"
         Id: "PolicyForCloudFrontPrivateContent"
@@ -177,10 +177,10 @@ Resources:
             Principal:
               Service: "cloudfront.amazonaws.com"
             Action: "s3:GetObject"
-            Resource: !Sub "${MediaConvertDestinationBucket.Arn}/*"
+            Resource: !Sub "${ThePlayer007MediaConvertDestination.Arn}/*"
             Condition:
               StringEquals:
-                AWS:SourceArn: !GetAtt MediaConvertCloudFrontDistribution.Arn
+                AWS:SourceArn: !Ref ThePlayer007MediaConvertDestination
 
 # Outputs:
 #   LambdaFunctionArn:
