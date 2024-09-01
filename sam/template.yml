@@ -151,8 +151,8 @@ Resources:
           SmoothStreaming: false
           TargetOriginId: "theplayer007-mediaconvert-destination-origin"
           ViewerProtocolPolicy: "redirect-to-https"
-          AllowedMethods: ["GET"]
-          CachedMethods: ["GET"]
+          AllowedMethods: ["GET","HEAD"]
+          CachedMethods: ["GET","HEAD"]
           DefaultTTL: 0
           MinTTL: 0
           MaxTTL: 0
