@@ -34,7 +34,6 @@ Resources:
           - "MediaConvert Job State Change"
         
       Name: "mediaconvert-job-state-change-rule"
-      RoleArn: String
       Targets:
         - Arn: !Ref MediaConvertSnsTopic
           Id: "MediaConvertJobStateChange"
