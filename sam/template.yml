@@ -29,7 +29,7 @@ Resources:
       Description: "It monitors the media convert job state change event"
       EventPattern: 
         source:
-          - MyTestApp
+          - "aws.mediaconvert"
         detail-type: 
           - "MediaConvert Job State Change"
         
@@ -39,7 +39,7 @@ Resources:
         - Arn: !Ref MediaConvertSnsTopic
           Id: "MediaConvertJobStateChange"
     
-  MediaConvertLambdaExecutionRole:
+  MediaConvertLambdaExecutionRole:  
     Type: "AWS::IAM::Role"
     Properties:
       AssumeRolePolicyDocument:
@@ -151,8 +151,8 @@ Resources:
           SmoothStreaming: false
           TargetOriginId: "theplayer007-mediaconvert-destination-origin"
           ViewerProtocolPolicy: "redirect-to-https"
-          AllowedMethods: ["GET","HEAD"]
-          CachedMethods: ["GET","HEAD"]
+          AllowedMethods: ["HEAD","GET"]
+          CachedMethods: ["HEAD","GET"]
           DefaultTTL: 0
           MinTTL: 0
           MaxTTL: 0
