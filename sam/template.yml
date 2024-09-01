@@ -141,6 +141,8 @@ Resources:
         Origins:
           - Id: "theplayer007-mediaconvert-destination-origin"
             DomainName: "theplayer007-mediaconvert-destination.s3.us-east-1.amazonaws.com"
+            S3OriginConfig: 
+              OriginAccessIdentity: ""
             OriginAccessControlId: !GetAtt MediaConvertCloudfrontOriginAccessControl.Id
             ConnectionAttempts: 3
             ConnectionTimeout: 10
