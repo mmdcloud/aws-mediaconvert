@@ -16,7 +16,33 @@ Resources:
     Properties:
       TopicName: "mediaconvert-sns-topic"
 
-  LambdaExecutionRole:
+  MediaConvertSnsSubscription:
+    Type: AWS::SNS::Subscription
+    Properties:
+      Endpoint: "mohitfury1997@gmail.com"
+      Protocol: "email"
+      SubscriptionRoleArn: String
+      TopicArn: !GetAtt MediaConvertSnsTopic.Arn
+
+  MediaConvertEventBridgeEvent:
+    Type: AWS::Events::Rule
+    Properties:
+      Description: "It monitors the media convert job state change event"
+      EventPattern: 
+        source:
+          - MyTestApp
+        detail-type: 
+          - "MediaConvert Job State Change"
+        
+      Name: "mediaconvert-job-state-change-rule"
+      RoleArn: String
+      Targets: 
+        - 
+          Arn: 
+            Ref: "MySNSTopic"
+          Id: "MediaConvertJobStateChange"
+    
+  MediaConvertLambdaExecutionRole:
     Type: "AWS::IAM::Role"
     Properties:
       AssumeRolePolicyDocument:
@@ -27,7 +53,7 @@ Resources:
               Service: "lambda.amazonaws.com"
             Action: "sts:AssumeRole"
       Policies:
-        - PolicyName: "MyLambdaPolicy"
+        - PolicyName: "LambdaCloudwatchPolicy"
           PolicyDocument:
             Version: "2012-10-17"
             Statement:
@@ -38,7 +64,29 @@ Resources:
                   - "logs:PutLogEvents"
                 Resource: "arn:aws:logs:*:*:*"
 
-  MediaConvertRole:
+        - PolicyName: "LambdaMediaConvertPolicy"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                 - "mediaconvert:*"
+                 - "s3:ListAllMyBuckets"
+                 - "s3:ListBucket"
+                Resource: "*"
+        - PolicyName: "PassRole"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: "Allow"
+                Action: "iam:PassRole"
+                Resource: "*"
+                Condition:
+                  StringLike:
+                    iam:PassedToService:
+                      - "mediaconvert.amazonaws.com"
+
+  MediaConvertS3Role:
     Type: "AWS::IAM::Role"
     Properties:
       AssumeRolePolicyDocument:
@@ -49,7 +97,7 @@ Resources:
               Service: "mediaconvert.amazonaws.com"
             Action: "sts:AssumeRole"
       Policies:
-        - PolicyName: "MediaConvertPolicy"
+        - PolicyName: "MediaConvertS3Policy"
           PolicyDocument:
             Version: "2012-10-17"
             Statement:
@@ -65,17 +113,27 @@ Resources:
       Handler: "lambda_function.lambda_handler"
       Runtime: "python3.10"
       CodeUri: "../terraform/lambda_function.zip"
-      Role: !GetAtt LambdaExecutionRole.Arn
+      Role: !GetAtt MediaConvertLambdaExecutionRole.Arn
       Environment:
         Variables:
           DestinationBucket: !Ref ThePlayer007MediaConvertDestination
-          MediaConvertRole: !GetAtt MediaConvertRole.Arn
+          MediaConvertRole: !GetAtt MediaConvertS3Role.Arn
       Events:
         S3Event:
           Type: "S3"
           Properties:
             Bucket: !Ref ThePlayer007MediaConvertSource
             Events: "s3:ObjectCreated:*"
+
+  MediaConvertCloudfrontOriginAccessControl:
+    Type: AWS::CloudFront::OriginAccessControl
+    Properties:
+      OriginAccessControlConfig: 
+        Description: "mediaconvert-s3-oac"
+        Name: "mediaconvert-s3-oac"
+        OriginAccessControlOriginType: "s3"
+        SigningBehavior: "always"
+        SigningProtocol: "sigv4"
 
   MediaConvertCloudfrontDistribution:
     Type: "AWS::CloudFront::Distribution"
@@ -85,22 +143,29 @@ Resources:
         Origins:
           - Id: "S3Origin"
             DomainName: !GetAtt ThePlayer007MediaConvertDestination.DomainName
+            OriginAccessControlId: !GetAtt MediaConvertCloudfrontOriginAccessControl.Id
             S3OriginConfig:
               OriginAccessIdentity: !Sub "origin-access-identity/cloudfront/${AWS::StackName}"
         DefaultCacheBehavior:
+          Compress: true
+          SmoothStreaming: false
           TargetOriginId: "S3Origin"
           ViewerProtocolPolicy: "redirect-to-https"
-          AllowedMethods: ["GET", "HEAD", "OPTIONS"]
-          CachedMethods: ["GET", "HEAD"]
-          Compress: true
+          AllowedMethods: ["GET"]
+          CachedMethods: ["GET"]
+          DefaultTTL: 0
+          MinTTL: 0
+          MaxTTL: 0
           ForwardedValues:
             QueryString: false
             Cookies:
               Forward: "none"
         ViewerCertificate:
-          CloudFrontDefaultCertificate: false
+          CloudFrontDefaultCertificate: true
         DefaultRootObject: "index.html"
+        IPV6Enabled : false,
         PriceClass: "PriceClass_200"
+
 # Outputs:
 #   LambdaFunctionArn:
 #     Value: !GetAtt MyLambdaFunction.Arn

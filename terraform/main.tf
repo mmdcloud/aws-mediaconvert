@@ -7,7 +7,7 @@ locals {
 resource "aws_sns_topic" "mediaconvert-sns-topic" {
   name = "mediaconvert-sns-topic"
   tags = {
-	Name = var.application_name
+  	Name = var.application_name
   }
 }
 
@@ -78,16 +78,16 @@ resource "aws_iam_role" "mediaconvert-role" {
   name               = "mediaconvert-role"
   assume_role_policy = <<EOF
     {
-    "Version": "2012-10-17",
-    "Statement": [
+      "Version": "2012-10-17",
+      "Statement": [
         {
-        "Effect": "Allow",
-        "Principal": {
-            "Service": "mediaconvert.amazonaws.com"
-        },
-        "Action": "sts:AssumeRole"
+          "Effect": "Allow",
+          "Principal": {
+              "Service": "mediaconvert.amazonaws.com"
+          },
+          "Action": "sts:AssumeRole"
         }
-    ]
+      ]
     }
     EOF
   tags = {
@@ -100,8 +100,8 @@ resource "aws_iam_policy" "mediaconvert-policy" {
   name   = "mediaconvert-policy"
   policy = <<EOF
     {
-    "Version": "2012-10-17",
-    "Statement": [
+      "Version": "2012-10-17",
+      "Statement": [
         {
         "Effect": "Allow",
         "Action": [
@@ -110,7 +110,7 @@ resource "aws_iam_policy" "mediaconvert-policy" {
             ],
             "Resource": "*"
         }
-    ]
+      ]
     }
     EOF
   tags = {
@@ -129,17 +129,17 @@ resource "aws_iam_role" "mediaconvert-function-role" {
   name               = "mediaconvert-function-role"
   assume_role_policy = <<EOF
     {
-    "Version": "2012-10-17",
-    "Statement": [
-    {
-        "Action": "sts:AssumeRole",
-        "Principal": {
-        "Service": "lambda.amazonaws.com"
-        },
-        "Effect": "Allow",
-        "Sid": ""
-    }
-    ]
+      "Version": "2012-10-17",
+      "Statement": [
+        {
+          "Action": "sts:AssumeRole",
+          "Principal": {
+            "Service": "lambda.amazonaws.com"
+          },
+          "Effect": "Allow",
+          "Sid": ""
+        }
+      ]
     }
     EOF
   tags = {
@@ -153,42 +153,42 @@ resource "aws_iam_policy" "mediaconvert-function-policy" {
   description = "AWS IAM Policy for managing aws lambda role"
   policy      = <<EOF
     {
-    "Version": "2012-10-17",
-    "Statement": [
-    {
-        "Action": [
-        "logs:CreateLogGroup",
-        "logs:CreateLogStream",
-        "logs:PutLogEvents",
-        "mediaconvert:*"
-        ],
-        "Resource": "arn:aws:logs:*:*:*",
-        "Effect": "Allow"
-    },
-    {
-            "Effect": "Allow",
-            "Action": [
-                "mediaconvert:*",
-                "s3:ListAllMyBuckets",
-                "s3:ListBucket"
-            ],
-            "Resource": "*"
-        },
-        {
-            "Effect": "Allow",
-            "Action": [
-                "iam:PassRole"
-            ],
-            "Resource": "*",
-            "Condition": {
-                "StringLike": {
-                    "iam:PassedToService": [
-                        "mediaconvert.amazonaws.com"
-                    ]
-                }
-            }
-        }
-    ]
+      "Version": "2012-10-17",
+      "Statement": [
+      {
+          "Action": [
+            "logs:CreateLogGroup",
+            "logs:CreateLogStream",
+            "logs:PutLogEvents",
+            "mediaconvert:*"
+          ],
+          "Resource": "arn:aws:logs:*:*:*",
+          "Effect": "Allow"
+      },
+      {
+              "Effect": "Allow",
+              "Action": [
+                  "mediaconvert:*",
+                  "s3:ListAllMyBuckets",
+                  "s3:ListBucket"
+              ],
+              "Resource": "*"
+          },
+          {
+              "Effect": "Allow",
+              "Action": [
+                  "iam:PassRole"
+              ],
+              "Resource": "*",
+              "Condition": {
+                  "StringLike": {
+                      "iam:PassedToService": [
+                          "mediaconvert.amazonaws.com"
+                      ]
+                  }
+              }
+          }
+      ]
     }
     EOF
   tags = {
