@@ -21,7 +21,6 @@ Resources:
     Properties:
       Endpoint: "mohitfury1997@gmail.com"
       Protocol: "email"
-      SubscriptionRoleArn: String
       TopicArn: !GetAtt MediaConvertSnsTopic.Arn
 
   MediaConvertEventBridgeEvent:
@@ -36,10 +35,8 @@ Resources:
         
       Name: "mediaconvert-job-state-change-rule"
       RoleArn: String
-      Targets: 
-        - 
-          Arn: 
-            Ref: "MySNSTopic"
+      Targets:
+        - Arn: !GetAtt MediaConvertSnsTopic.Arn
           Id: "MediaConvertJobStateChange"
     
   MediaConvertLambdaExecutionRole:
@@ -74,6 +71,7 @@ Resources:
                  - "s3:ListAllMyBuckets"
                  - "s3:ListBucket"
                 Resource: "*"
+
         - PolicyName: "PassRole"
           PolicyDocument:
             Version: "2012-10-17"
@@ -113,7 +111,7 @@ Resources:
       Handler: "lambda_function.lambda_handler"
       Runtime: "python3.10"
       CodeUri: "../terraform/lambda_function.zip"
-      Role: !GetAtt MediaConvertLambdaExecutionRole.Arn
+      Role: !Ref MediaConvertLambdaExecutionRole
       Environment:
         Variables:
           DestinationBucket: !Ref ThePlayer007MediaConvertDestination
@@ -141,15 +139,15 @@ Resources:
       DistributionConfig:
         Enabled: true
         Origins:
-          - Id: "S3Origin"
-            DomainName: !GetAtt ThePlayer007MediaConvertDestination.DomainName
+          - Id: "theplayer007-mediaconvert-destination-origin"
+            DomainName: "theplayer007-mediaconvert-destination.s3.us-east-1.amazonaws.com"
             OriginAccessControlId: !GetAtt MediaConvertCloudfrontOriginAccessControl.Id
-            S3OriginConfig:
-              OriginAccessIdentity: !Sub "origin-access-identity/cloudfront/${AWS::StackName}"
+            ConnectionAttempts: 3
+            ConnectionTimeout: 10
         DefaultCacheBehavior:
           Compress: true
           SmoothStreaming: false
-          TargetOriginId: "S3Origin"
+          TargetOriginId: "theplayer007-mediaconvert-destination-origin"
           ViewerProtocolPolicy: "redirect-to-https"
           AllowedMethods: ["GET"]
           CachedMethods: ["GET"]
@@ -157,14 +155,32 @@ Resources:
           MinTTL: 0
           MaxTTL: 0
           ForwardedValues:
-            QueryString: false
+            QueryString: true
             Cookies:
-              Forward: "none"
+              Forward: "all"
         ViewerCertificate:
           CloudFrontDefaultCertificate: true
         DefaultRootObject: "index.html"
-        IPV6Enabled : false,
+        IPV6Enabled : false
         PriceClass: "PriceClass_200"
+  
+  MediaConvertDestinationBucketPolicy:
+    Type: "AWS::S3::BucketPolicy"
+    Properties:
+      Bucket: !Ref MediaConvertDestinationBucket
+      PolicyDocument:
+        Version: "2012-10-17"
+        Id: "PolicyForCloudFrontPrivateContent"
+        Statement:
+          - Sid: "AllowCloudFrontServicePrincipal"
+            Effect: "Allow"
+            Principal:
+              Service: "cloudfront.amazonaws.com"
+            Action: "s3:GetObject"
+            Resource: !Sub "${MediaConvertDestinationBucket.Arn}/*"
+            Condition:
+              StringEquals:
+                AWS:SourceArn: !GetAtt MediaConvertCloudFrontDistribution.Arn
 
 # Outputs:
 #   LambdaFunctionArn:
