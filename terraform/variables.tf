@@ -14,6 +14,6 @@ variable "destination_bucket" {
 }
 
 variable "application_name" {
-    type    = string
-    default = "mediaconvert"
+  type    = string
+  default = "mediaconvert"
 }

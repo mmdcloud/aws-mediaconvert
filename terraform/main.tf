@@ -7,7 +7,7 @@ locals {
 resource "aws_sns_topic" "mediaconvert-sns-topic" {
   name = "mediaconvert-sns-topic"
   tags = {
-  	Name = var.application_name
+    Name = var.application_name
   }
 }
 
@@ -31,7 +31,7 @@ resource "aws_cloudwatch_event_rule" "mediaconvert-job-state-change-rule" {
     ]
   })
   tags = {
-        Name = var.application_name
+    Name = var.application_name
   }
 }
 
@@ -55,12 +55,17 @@ data "aws_iam_policy_document" "mediaconvert-sns-topic-policy" {
   }
 }
 
+resource "aws_sns_topic_policy" "mediaconvert-sns-eventbridge-permission-policy" {
+  arn    = aws_sns_topic.mediaconvert-sns-topic.arn
+  policy = data.aws_iam_policy_document.mediaconvert-sns-topic-policy.json
+}
+
 # S3 bucket for media convert upload
 resource "aws_s3_bucket" "mediaconvert-source" {
   bucket        = var.source_bucket
   force_destroy = true
   tags = {
-        Name = var.application_name
+    Name = var.application_name
   }
 }
 
@@ -69,7 +74,7 @@ resource "aws_s3_bucket" "mediaconvert-destination" {
   bucket        = var.destination_bucket
   force_destroy = true
   tags = {
-        Name = var.application_name
+    Name = var.application_name
   }
 }
 
@@ -91,7 +96,7 @@ resource "aws_iam_role" "mediaconvert-role" {
     }
     EOF
   tags = {
-        Name = var.application_name
+    Name = var.application_name
   }
 }
 
@@ -114,7 +119,7 @@ resource "aws_iam_policy" "mediaconvert-policy" {
     }
     EOF
   tags = {
-        Name = var.application_name
+    Name = var.application_name
   }
 }
 
@@ -143,7 +148,7 @@ resource "aws_iam_role" "mediaconvert-function-role" {
     }
     EOF
   tags = {
-        Name = var.application_name
+    Name = var.application_name
   }
 }
 
@@ -192,7 +197,7 @@ resource "aws_iam_policy" "mediaconvert-function-policy" {
     }
     EOF
   tags = {
-        Name = var.application_name
+    Name = var.application_name
   }
 }
 
@@ -237,7 +242,7 @@ resource "aws_lambda_function" "mediaconvert-function" {
     }
   }
   tags = {
-        Name = var.application_name
+    Name = var.application_name
   }
 }
 
@@ -288,7 +293,7 @@ resource "aws_cloudfront_distribution" "mediaconvert_cloudfront_distribution" {
   price_class     = "PriceClass_200"
   is_ipv6_enabled = false
   tags = {
-        Name = var.application_name
+    Name = var.application_name
   }
 }
 
