@@ -23,6 +23,20 @@ Resources:
       Protocol: "email"
       TopicArn: !Ref MediaConvertSnsTopic
 
+  MediaConvertSNSTopicPolicy:
+    Type: AWS::SNS::TopicPolicy
+    Properties:
+      Topics:
+        - Ref: MediaConvertSnsTopic
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: events.amazonaws.com
+            Action: sns:Publish
+            Resource: !Ref MediaConvertSnsTopic
+
   MediaConvertEventBridgeEvent:
     Type: AWS::Events::Rule
     Properties:
