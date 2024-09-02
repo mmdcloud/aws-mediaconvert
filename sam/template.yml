@@ -11,6 +11,24 @@ Resources:
     Properties:
       BucketName: "theplayer007-mediaconvert-destination"
 
+  DynamoDBTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: MediaconvertRecords
+      AttributeDefinitions:
+        - AttributeName: RecordId
+          AttributeType: S
+        - AttributeName: Timestamp
+          AttributeType: N
+      KeySchema:
+        - AttributeName: RecordId
+          KeyType: HASH
+        - AttributeName: Timestamp
+          KeyType: RANGE
+      ProvisionedThroughput:
+        ReadCapacityUnits: 20
+        WriteCapacityUnits: 20
+
   MediaConvertSnsTopic:
     Type: "AWS::SNS::Topic"
     Properties:

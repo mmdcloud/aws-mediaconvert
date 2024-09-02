@@ -11,6 +11,30 @@ resource "aws_sns_topic" "mediaconvert-sns-topic" {
   }
 }
 
+# DynamoDB Table For storing media records
+resource "aws_dynamodb_table" "mediaconvert-records" {
+  name           = "records"
+  billing_mode   = "PROVISIONED"
+  read_capacity  = 20
+  write_capacity = 20
+  hash_key       = "RecordId"
+  range_key      = "RecordId"
+
+  attribute {
+    name = "RecordId"
+    type = "S"
+  }
+
+  ttl {
+    attribute_name = "TimeToExist"
+    enabled        = true
+  }
+
+  tags = {
+    Name        = "mediaconvert-records"
+  }
+}
+
 # SNS Subscription
 resource "aws_sns_topic_subscription" "mediaconvert-sns-subscription" {
   topic_arn = aws_sns_topic.mediaconvert-sns-topic.arn
