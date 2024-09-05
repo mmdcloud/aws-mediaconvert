@@ -1,5 +1,5 @@
 {
-  "name": "my-app",
+  "name": "mediaconvert-frontend",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -9,14 +9,17 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "flowbite-react": "^0.10.1",
+    "next": "14.2.8",
     "react": "^18",
     "react-dom": "^18",
-    "next": "14.2.7"
+    "react-player": "^2.16.0"
   },
   "devDependencies": {
-    "postcss": "^8",
-    "tailwindcss": "^3.4.1",
+    "autoprefixer": "^10.4.20",
     "eslint": "^8",
-    "eslint-config-next": "14.2.7"
+    "eslint-config-next": "14.2.8",
+    "postcss": "^8.4.45",
+    "tailwindcss": "^3.4.10"
   }
 }
