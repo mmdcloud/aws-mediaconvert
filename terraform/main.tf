@@ -18,10 +18,15 @@ resource "aws_dynamodb_table" "mediaconvert-records" {
   read_capacity  = 20
   write_capacity = 20
   hash_key       = "RecordId"
-  range_key      = "RecordId"
+  range_key      = "RecordName"
 
   attribute {
     name = "RecordId"
+    type = "S"
+  }
+
+  attribute {
+    name = "RecordName"
     type = "S"
   }
 
@@ -31,7 +36,7 @@ resource "aws_dynamodb_table" "mediaconvert-records" {
   }
 
   tags = {
-    Name        = "mediaconvert-records"
+    Name = "mediaconvert-records"
   }
 }
 
