@@ -213,7 +213,7 @@ Resources:
             Resource: !Sub "${ThePlayer007MediaConvertDestination.Arn}/*"
             Condition:
               StringEquals:
-                AWS:SourceArn: !Ref ThePlayer007MediaConvertDestination
+                AWS:SourceArn: !GetAtt MediaConvertCloudfrontDistribution.Arn
 
 # Outputs:
 #   LambdaFunctionArn:
