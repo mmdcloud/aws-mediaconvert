@@ -1,14 +1,14 @@
-import * as cdk from 'aws-cdk-lib';
-import { Stack, StackProps } from 'aws-cdk-lib';
-import { Bucket, BucketPolicy } from 'aws-cdk-lib/aws-s3';
-import { Table, AttributeType, BillingMode } from 'aws-cdk-lib/aws-dynamodb';
-import { Topic, Subscription } from 'aws-cdk-lib/aws-sns';
-import { SnsSubscription } from 'aws-cdk-lib/aws-sns-subscriptions';
-import { Role, ServicePrincipal, PolicyStatement } from 'aws-cdk-lib/aws-iam';
-import { Function, Runtime, Code } from 'aws-cdk-lib/aws-lambda';
-import { Rule, EventPattern } from 'aws-cdk-lib/aws-events';
-import { SnsEventSource } from 'aws-cdk-lib/aws-lambda-event-sources';
-import { CloudFrontWebDistribution, OriginAccessIdentity, CloudFrontAllowedMethods, CloudFrontAllowedHeaders } from 'aws-cdk-lib/aws-cloudfront';
+import * as cdk from 'aws-cdk';
+import { Stack, StackProps } from 'aws-cdk';
+import { Bucket, BucketPolicy } from 'aws-cdk/aws-s3';
+import { Table, AttributeType, BillingMode } from 'aws-cdk/aws-dynamodb';
+import { Topic, Subscription } from 'aws-cdk/aws-sns';
+import { SnsSubscription } from 'aws-cdk/aws-sns-subscriptions';
+import { Role, ServicePrincipal, PolicyStatement } from 'aws-cdk/aws-iam';
+import { Function, Runtime, Code } from 'aws-cdk/aws-lambda';
+import { Rule, EventPattern } from 'aws-cdk/aws-events';
+import { SnsEventSource } from 'aws-cdk/aws-lambda-event-sources';
+import { CloudFrontWebDistribution, OriginAccessIdentity, CloudFrontAllowedMethods, CloudFrontAllowedHeaders } from 'aws-cdk/aws-cloudfront';
 
 export class MediaConvertStack extends Stack {
   constructor(scope: cdk.Construct, id: string, props?: StackProps) {
