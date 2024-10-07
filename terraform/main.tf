@@ -258,18 +258,20 @@ resource "aws_s3_bucket_notification" "mediaconvert-bucket-notification" {
 
 # Lambda function configuration
 resource "aws_lambda_function" "mediaconvert-function" {
-  filename      = "lambda_function.zip"
   function_name = "mediaconvert-function"
   role          = aws_iam_role.mediaconvert-function-role.arn
   handler       = "lambda_function.lambda_handler"
   runtime       = "python3.10"
   depends_on    = [aws_iam_role_policy_attachment.mediaconvert-function-policy-attachment]
+  s3_bucket     = aws_s3_bucket.mediaconvert-function-code.bucket
+  s3_key        = "lambda_function.zip"
   environment {
     variables = {
       DestinationBucket = aws_s3_bucket.mediaconvert-destination.bucket
       MediaConvertRole  = aws_iam_role.mediaconvert-role.arn
     }
   }
+  code_signing_config_arn = aws_lambda_code_signing_config.mediaconvert_signing_config.arn
   tags = {
     Name = var.application_name
   }
@@ -349,4 +351,73 @@ resource "aws_s3_bucket_policy" "mediaconvert_destination_s3_bucket_policy" {
       }
     ]
   })
+}
+
+resource "aws_s3_bucket" "mediaconvert-function-code" {
+  bucket        = "theplayer007-mediaconvert-function-code"
+  force_destroy = true
+  tags = {
+    Name = "theplayer007-mediaconvert-function-code"
+  }
+}
+
+resource "aws_s3_bucket_versioning" "mediaconvert-function-code-versioning" {
+  bucket = aws_s3_bucket.mediaconvert-function-code.id
+  versioning_configuration {
+    status = "Enabled"
+  }
+}
+
+resource "aws_s3_bucket" "mediaconvert-function-code-signed" {
+  bucket        = "theplayer007-mediaconvert-function-code-signed"
+  force_destroy = true
+  tags = {
+    Name = "theplayer007-mediaconvert-function-code-signed"
+  }
+}
+
+resource "aws_s3_object" "mediaconvert-function-code-object" {
+  bucket = aws_s3_bucket.mediaconvert-function-code.id
+  key    = "lambda_function.zip"
+  source = "./lambda_function.zip"
+}
+
+# Signing Profile
+resource "aws_signer_signing_profile" "mediaconvert_signing_profile" {
+  # name_prefix = "mediaconvert_signing_profile"
+  platform_id = "AWSLambda-SHA384-ECDSA"
+  signature_validity_period {
+    value = 5
+    type  = "YEARS"
+  }
+}
+
+resource "aws_lambda_code_signing_config" "mediaconvert_signing_config" {
+  allowed_publishers {
+    signing_profile_version_arns = [aws_signer_signing_profile.mediaconvert_signing_profile.version_arn]
+  }
+  policies {
+    untrusted_artifact_on_deployment = "Warn"
+  }
+}
+
+resource "aws_signer_signing_job" "mediaconvert_build_signing_job" {
+  profile_name = aws_signer_signing_profile.mediaconvert_signing_profile.name
+
+  source {
+    s3 {
+      bucket  = aws_s3_bucket.mediaconvert-function-code.bucket
+      key     = "lambda_function.zip"
+      version = aws_s3_object.mediaconvert-function-code-object.version_id
+    }
+  }
+
+  destination {
+    s3 {
+      bucket = aws_s3_bucket.mediaconvert-function-code-signed.bucket
+    }
+  }
+
+  ignore_signing_job_failure = true
+  depends_on                 = [aws_lambda_function.mediaconvert-function]
 }
