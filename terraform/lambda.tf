@@ -43,3 +43,17 @@ resource "aws_lambda_function" "get-records-function" {
     Name = var.application_name
   }
 }
+
+# Lambda function for generating presigned url for uploading media files
+resource "aws_lambda_function" "mediaconvert-generate-presigned-url" {
+  filename      = "./files/get_presigned_url.zip"
+  function_name = "mediaconvert-generate-presigned-url"
+  role          = aws_iam_role.mediaconvert-function-role.arn
+  handler       = "get_presigned_url.lambda_handler"
+  runtime       = "python3.10"
+  depends_on    = [aws_iam_role_policy_attachment.mediaconvert-function-policy-attachment]
+  # code_signing_config_arn = aws_lambda_code_signing_config.mediaconvert_signing_config.arn
+  tags = {
+    Name = var.application_name
+  }
+}

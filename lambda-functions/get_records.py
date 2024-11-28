@@ -1,28 +1,50 @@
+from __future__ import print_function  # Python 2/3 compatibility
 import boto3
+import json
+from botocore.exceptions import ClientError
 
-# Function to paginate through items
-def lambda_handler(event, context):
-    dynamodb = boto3.client('dynamodb')
-    data = [];
-    statusCode = 200
-    table = dynamodb.Table('records')
-    try:
-        response = table.scan()
-        items = response.get('Items', [])
-    
+# Create Client
+session = boto3.session.Session()
+dynamoDbClient = session.client('dynamodb')
+
+def lambda_handler(event,context):
+
+    table_name = 'records'
+
+    records = []
+
+    response = {}
+    try:    
+        # Get the first 1MB of data    
+        response = dynamoDbClient.scan(
+            TableName=table_name
+        )
+    except ClientError as error:
+        print("Something went wrong: ")
+        print(error.response['ResponseMetadata'])
+
+    if 'LastEvaluatedKey' in response:
+        # Paginate returning up to 1MB of data for each iteration
         while 'LastEvaluatedKey' in response:
-            response = table.scan(ExclusiveStartKey=response['LastEvaluatedKey'])
-            items.extend(response.get('Items', []))
-    
-        data = items
-    except Exception as e:
-        print ('Exception: %s' % e)
-        statusCode = 500
-        raise
+            try:
+                response = dynamoDbClient.scan(
+                    TableName=table_name,
+                    ExclusiveStartKey=response['LastEvaluatedKey']
+                )
+                # Track number of Items read
+                records = response['Items']
 
-    finally:
-        return {
-            'statusCode': statusCode,
-            'body': json.dumps(data),
-            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'}
-        }
+            except ClientError as error:
+                print("Something went wrong: ")
+                print(error.response['ResponseMetadata'])
+
+    else:
+        records = response['Items']
+        
+    return {
+        "statusCode": 200,
+        "headers": {
+            "Content-Type": "application/json"
+        },
+        "body": json.dumps(records)
+    }

@@ -154,6 +154,22 @@ Resources:
             Bucket: !Ref ThePlayer007MediaConvertSource
             Events: "s3:ObjectCreated:*"
 
+  MediaConvertGetRecordsFunction:
+    Type: "AWS::Serverless::Function"
+    Properties:
+      Handler: "get_records.lambda_handler"
+      Runtime: "python3.10"
+      CodeUri: "../terraform/get_records.zip"
+      Role: !GetAtt MediaConvertLambdaExecutionRole.Arn            
+
+  MediaConvertGetPresignedUrlFunction:
+    Type: "AWS::Serverless::Function"
+    Properties:
+      Handler: "get_presigned_url.lambda_handler"
+      Runtime: "python3.10"
+      CodeUri: "../terraform/get_presigned_url.zip"
+      Role: !GetAtt MediaConvertLambdaExecutionRole.Arn
+
   MediaConvertCloudfrontOriginAccessControl:
     Type: AWS::CloudFront::OriginAccessControl
     Properties:
