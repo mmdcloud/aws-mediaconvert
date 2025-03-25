@@ -9,7 +9,7 @@ dynamoDbClient = session.client('dynamodb')
 
 def lambda_handler(event,context):
 
-    table_name = 'records'
+    table_name = 'mediaconvert-records'
 
     records = []
 

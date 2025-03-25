@@ -65,7 +65,7 @@ def lambda_handler(event, context):
         print (json.dumps(job, default=str))
         
         # Storing asset information in DynamoDB
-        dynamodb.put_item(TableName='records', Item={'RecordId':{"S":assetID},'filename':{"S":sourceS3Key}})
+        dynamodb.put_item(TableName='mediaconvert-records', Item={'RecordId':{"S":assetID},'filename':{"S":sourceS3Key}})
     except Exception as e:
         print ('Exception: %s' % e)
         statusCode = 500

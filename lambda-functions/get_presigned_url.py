@@ -10,7 +10,7 @@ def lambda_handler(event, context):
     body = json.loads(event['body'])
     url = s3_client.generate_presigned_url(
         ClientMethod='put_object',
-        Params={'Bucket': 'madmaxdemobucket', 'Key': body["file"],'Metadata': {
+        Params={'Bucket': 'mediaconvertsrcmadmax', 'Key': body["file"],'Metadata': {
             "record_name": body["file"]
         }},
         ExpiresIn=60,
