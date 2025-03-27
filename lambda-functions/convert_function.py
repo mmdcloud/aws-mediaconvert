@@ -11,14 +11,14 @@ from botocore.client import ClientError
 def lambda_handler(event, context):
     dynamodb = boto3.client('dynamodb')
     assetID = str(uuid.uuid4())
-    sourceS3Bucket = event['Records'][0]['s3']['bucket']['name']
-    sourceS3Key = event['Records'][0]['s3']['object']['key']
+    sourceS3Bucket = json.loads(event['Records'][0]['body'])['Records'][0]['s3']['bucket']['name']
+    sourceS3Key = json.loads(event['Records'][0]['body'])['Records'][0]['s3']['object']['key']
     sourceS3 = 's3://'+ sourceS3Bucket + '/' + sourceS3Key
     sourceS3Basename = os.path.splitext(os.path.basename(sourceS3))[0]
     destinationS3 = 's3://' + os.environ['DestinationBucket']
     destinationS3basename = os.path.splitext(os.path.basename(destinationS3))[0]
     mediaConvertRole = os.environ['MediaConvertRole']
-    region = os.environ['AWS_DEFAULT_REGION']
+    region = os.environ['REGION']
     statusCode = 200
     body = {}
     

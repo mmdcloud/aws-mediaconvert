@@ -55,14 +55,38 @@ module "mediaconvert_sqs" {
   source                        = "./modules/sqs"
   queue_name                    = "mediaconvert-process-queue"
   delay_seconds                 = 0
+  maxReceiveCount               = 3
+  dlq_message_retention_seconds = 86400
+  dlq_name                      = "mediaconvert-process-dlq"
   max_message_size              = 262144
   message_retention_seconds     = 345600
-  receive_wait_time_seconds     = 10
-  visibility_timeout_seconds    = 30
-  sqs_managed_sse_enabled       = true
-  dlq_name                      = "mediaconvert-process-dlq"
-  dlq_max_receive_count         = 5
-  dlq_message_retention_seconds = 1209600
+  visibility_timeout_seconds    = 180
+  receive_wait_time_seconds     = 20
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect    = "Allow"
+        Principal = { Service = "s3.amazonaws.com" }
+        Action    = "sqs:SendMessage"
+        Resource  = "arn:aws:sqs:us-east-1:*:mediaconvert-process-queue"
+        Condition = {
+          ArnEquals = {
+            "aws:SourceArn" = module.mediaconvert_source_bucket.arn
+          }
+        }
+      }
+    ]
+  })
+}
+
+#  Lambda SQS event source mapping
+resource "aws_lambda_event_source_mapping" "sqs_event_trigger" {
+  event_source_arn                   = module.mediaconvert_sqs.arn
+  function_name                      = module.mediaconvert_lambda_function.arn
+  enabled                            = true
+  batch_size                         = 10
+  maximum_batching_window_in_seconds = 60
 }
 
 # MediaConvert Source Bucket
@@ -72,13 +96,13 @@ module "mediaconvert_source_bucket" {
   objects            = []
   versioning_enabled = "Enabled"
   bucket_notification = {
-    queue = []
-    lambda_function = [
+    queue = [
       {
-        lambda_function_arn = module.mediaconvert_lambda_function.arn
-        events              = ["s3:ObjectCreated:*"]
+        queue_arn = module.mediaconvert_sqs.arn
+        events    = ["s3:ObjectCreated:*"]
       }
     ]
+    lambda_function = []
   }
   cors = [
     {
@@ -222,10 +246,9 @@ module "mediaconvert_iam_role" {
         {
         "Effect": "Allow",
         "Action": [
-                "s3:*",
-                "s3-object-lambda:*"
+                "s3:*"
             ],
-            "Resource": "*"
+            "Resource": "${module.mediaconvert_destination_bucket.arn}"
         }
       ]
     }
@@ -282,7 +305,7 @@ module "mediaconvert_function_iam_role" {
               "Action": [
                   "dynamodb:*"
               ],
-	       "Resource": "*"
+	            "Resource": "${module.mediaconvert_dynamodb.arn}"
           },
           {
               "Effect": "Allow",
@@ -297,6 +320,15 @@ module "mediaconvert_function_iam_role" {
                       ]
                   }
               }
+          },
+          {
+              "Action": [
+                "sqs:ReceiveMessage",
+                "sqs:DeleteMessage",
+                "sqs:GetQueueAttributes"
+              ],
+              "Effect"   : "Allow",
+              "Resource" : "${module.mediaconvert_sqs.arn}"
           }
       ]
     }
@@ -308,16 +340,10 @@ module "mediaconvert_lambda_function" {
   source        = "./modules/lambda"
   function_name = "mediaconvert_lambda_function"
   role_arn      = module.mediaconvert_function_iam_role.arn
-  permissions = [
-    {
-      statement_id = "AllowExecutionFromS3Bucket"
-      action       = "lambda:InvokeFunction"
-      principal    = "s3.amazonaws.com"
-      source_arn   = module.mediaconvert_source_bucket.arn
-    }
-  ]
   env_variables = {
-    REGION = var.region
+    REGION            = var.region
+    DestinationBucket = module.mediaconvert_destination_bucket.bucket
+    MediaConvertRole  = module.mediaconvert_iam_role.arn
   }
   handler    = "convert_function.lambda_handler"
   runtime    = "python3.12"

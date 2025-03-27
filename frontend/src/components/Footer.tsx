@@ -4,7 +4,7 @@ export default function Footer() {
   return (
     <footer className="bg-gray-800 text-white py-8">
       <div className="container mx-auto px-4">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        {/* <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           <div>
             <h3 className="text-xl font-bold mb-4">MediaApp</h3>
             <p className="text-gray-400">
@@ -26,8 +26,8 @@ export default function Footer() {
               Phone: (555) 123-4567
             </p>
           </div>
-        </div>
-        <div className="mt-8 pt-8 border-t border-gray-700 text-center text-gray-400">
+        </div> */}
+        <div className="border-gray-700 text-center text-gray-400">
           <p>&copy; {new Date().getFullYear()} MediaApp. All rights reserved.</p>
         </div>
       </div>
