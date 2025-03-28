@@ -11,8 +11,10 @@ from botocore.client import ClientError
 def lambda_handler(event, context):
     dynamodb = boto3.client('dynamodb')
     assetID = str(uuid.uuid4())
-    sourceS3Bucket = json.loads(event['Records'][0]['body'])['Records'][0]['s3']['bucket']['name']
-    sourceS3Key = json.loads(event['Records'][0]['body'])['Records'][0]['s3']['object']['key']
+    rec = json.loads(event['Records'][0]['body'])
+    # print(json.loads(event['Records'][0]['body']))
+    sourceS3Bucket = rec['Records'][0]['s3']['bucket']['name']
+    sourceS3Key = rec['Records'][0]['s3']['object']['key']
     sourceS3 = 's3://'+ sourceS3Bucket + '/' + sourceS3Key
     sourceS3Basename = os.path.splitext(os.path.basename(sourceS3))[0]
     destinationS3 = 's3://' + os.environ['DestinationBucket']

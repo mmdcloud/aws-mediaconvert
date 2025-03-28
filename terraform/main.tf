@@ -248,7 +248,7 @@ module "mediaconvert_iam_role" {
         "Action": [
                 "s3:*"
             ],
-            "Resource": "${module.mediaconvert_destination_bucket.arn}"
+            "Resource": "*"
         }
       ]
     }
