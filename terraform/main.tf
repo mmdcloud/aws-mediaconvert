@@ -394,15 +394,15 @@ module "mediaconvert_cloudfront_distribution" {
   enabled                               = true
   origin = [
     {
-      origin_id           = "mediaconvert_cdn_origin"
-      domain_name         = "mediaconvert_cdn_origin.s3.${var.region}.amazonaws.com"
+      origin_id           = "mediaconvertdestmadmax"
+      domain_name         = "mediaconvertdestmadmax.s3.${var.region}.amazonaws.com"
       connection_attempts = 3
       connection_timeout  = 10
     }
   ]
   compress                       = true
   smooth_streaming               = false
-  target_origin_id               = "mediaconvert_cdn_origin"
+  target_origin_id               = "mediaconvertdestmadmax"
   allowed_methods                = ["GET", "HEAD"]
   cached_methods                 = ["GET", "HEAD"]
   viewer_protocol_policy         = "redirect-to-https"
