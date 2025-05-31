@@ -416,20 +416,6 @@ module "mediaconvert_cloudfront_distribution" {
   query_string                   = true
 }
 
-# API Gateway configuration
-# module "mediaconvert_api_gw" {
-#   source         = "./modules/api-gateway"
-#   api_name       = "mediaconvert-api"
-#   endpoint_types = ["REGIONAL"]
-#   methods = {
-
-#   }
-#   resources = {
-
-#   }
-#   stage_name = "dev"
-# }
-
 # Frontend Module
 data "aws_ami" "ubuntu" {
   most_recent = true
@@ -464,6 +450,15 @@ module "security_group" {
     {
       from_port       = 80
       to_port         = 80
+      protocol        = "tcp"
+      self            = "false"
+      cidr_blocks     = ["0.0.0.0/0"]
+      security_groups = []
+      description     = "any"
+    },
+    {
+      from_port       = 22
+      to_port         = 22
       protocol        = "tcp"
       self            = "false"
       cidr_blocks     = ["0.0.0.0/0"]
@@ -572,6 +567,11 @@ data "aws_iam_policy_document" "instance_profile_policy_document" {
   statement {
     effect    = "Allow"
     actions   = ["s3:*"]
+    resources = ["*"]
+  }
+  statement {
+    effect    = "Allow"
+    actions   = ["cloudwatch:*"]
     resources = ["*"]
   }
 }
