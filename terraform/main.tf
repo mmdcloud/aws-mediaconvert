@@ -69,7 +69,7 @@ module "mediaconvert_sqs" {
         Effect    = "Allow"
         Principal = { Service = "s3.amazonaws.com" }
         Action    = "sqs:SendMessage"
-        Resource  = "arn:aws:sqs:us-east-1:*:mediaconvert-process-queue"
+        Resource  = "arn:aws:sqs:${var.region}:*:mediaconvert-process-queue"
         Condition = {
           ArnEquals = {
             "aws:SourceArn" = module.mediaconvert_source_bucket.arn
@@ -78,6 +78,41 @@ module "mediaconvert_sqs" {
       }
     ]
   })
+}
+
+module "cognito" {
+  source                     = "./modules/cognito"
+  name                       = "mediaconvert_users"
+  username_attributes        = ["email"]
+  auto_verified_attributes   = ["email"]
+  password_minimum_length    = 8
+  password_require_lowercase = true
+  password_require_numbers   = true
+  password_require_symbols   = true
+  password_require_uppercase = true
+  schema = [
+    {
+      attribute_data_type = "String"
+      name                = "email"
+      required            = true
+    }
+  ]
+  verification_message_template_default_email_option = "CONFIRM_WITH_CODE"
+  verification_email_subject                         = "Verify your email for MediaConvert"
+  verification_email_message                         = "Your verification code is {####}"
+  user_pool_clients = [
+    {
+      name                                 = "mediaconvert_client"
+      generate_secret                      = false
+      explicit_auth_flows                  = ["ALLOW_USER_PASSWORD_AUTH", "ALLOW_REFRESH_TOKEN_AUTH"]
+      allowed_oauth_flows_user_pool_client = true
+      allowed_oauth_flows                  = ["code", "implicit"]
+      allowed_oauth_scopes                 = ["email", "openid"]
+      callback_urls                        = ["https://example.com/callback"]
+      logout_urls                          = ["https://example.com/logout"]
+      supported_identity_providers         = ["COGNITO"]
+    }
+  ]
 }
 
 #  Lambda SQS event source mapping
@@ -218,6 +253,28 @@ module "mediaconvert_get_records_function_code_bucket" {
   force_destroy = true
 }
 
+# MediaConvert API Authorizer Function Code Bucket
+module "mediaconvert_api_authorizer_function_code_bucket" {
+  source      = "./modules/s3"
+  bucket_name = "mediaconvertapiauthorizerfunctioncode"
+  objects = [
+    {
+      key    = "api_authorizer.zip"
+      source = "./files/api_authorizer.zip"
+    }
+  ]
+  versioning_enabled = "Enabled"
+  cors = [
+    {
+      allowed_headers = ["*"]
+      allowed_methods = ["PUT", "POST", "GET"]
+      allowed_origins = ["*"]
+      max_age_seconds = 3000
+    }
+  ]
+  force_destroy = true
+}
+
 # MediaConvert IAM Role
 module "mediaconvert_iam_role" {
   source             = "./modules/iam"
@@ -332,6 +389,14 @@ module "mediaconvert_function_iam_role" {
               ],
               "Effect"   : "Allow",
               "Resource" : "${module.mediaconvert_sqs.arn}"
+          },
+          {
+            "Action": [
+                "cognito-idp:GetUser",
+                "cognito-idp:ListUsers"
+              ],
+              "Effect"   : "Allow",
+              "Resource" : "${module.cognito.user_pool_arn}"
           }
       ]
     }
@@ -399,6 +464,31 @@ module "mediaconvert_get_records_function" {
   s3_bucket  = module.mediaconvert_get_records_function_code_bucket.bucket
   s3_key     = "get_records.zip"
   depends_on = [module.mediaconvert_get_records_function_code_bucket]
+}
+
+# Lambda authorizer function for API Gateway
+module "mediaconvert_api_authorizer_function" {
+  source        = "./modules/lambda"
+  function_name = "mediaconvert-api-authorizer-function"
+  role_arn      = module.mediaconvert_function_iam_role.arn
+  env_variables = {
+    USER_POOL_ID  = module.cognito.user_pool_id
+    APP_CLIENT_ID = module.cognito.client_ids[0]
+    REGION        = var.region
+  }
+  permissions = [
+    {
+      statement_id = "AllowAPIGatewayInvoke"
+      action       = "lambda:InvokeFunction"
+      principal    = "apigateway.amazonaws.com"
+      source_arn   = "${aws_api_gateway_rest_api.mediaconvert_rest_api.execution_arn}/*/*/*"
+    }
+  ]
+  handler    = "api_authorizer.lambda_handler"
+  runtime    = "python3.12"
+  s3_bucket  = module.mediaconvert_api_authorizer_function_code_bucket.bucket
+  s3_key     = "api_authorizer.zip"
+  depends_on = [module.mediaconvert_api_authorizer_function_code_bucket]
 }
 
 # MediaConvert Cloudfront distribution
@@ -626,6 +716,15 @@ resource "aws_api_gateway_rest_api" "mediaconvert_rest_api" {
   }
 }
 
+# Authorizer Resource
+resource "aws_api_gateway_authorizer" "cognito_authorizer" {
+  name            = "mediaconvert-cognito-authorizer"
+  rest_api_id     = aws_api_gateway_rest_api.mediaconvert_rest_api.id
+  authorizer_uri  = module.mediaconvert_api_authorizer_function.invoke_arn
+  identity_source = "method.request.header.Authorization"
+  type            = "REQUEST"
+}
+
 resource "aws_api_gateway_resource" "mediaconvert_resource_api" {
   rest_api_id = aws_api_gateway_rest_api.mediaconvert_rest_api.id
   parent_id   = aws_api_gateway_rest_api.mediaconvert_rest_api.root_resource_id
@@ -637,7 +736,8 @@ resource "aws_api_gateway_method" "mediaconvert_resource_api_get_presigned_url_m
   resource_id      = aws_api_gateway_resource.mediaconvert_resource_api.id
   api_key_required = false
   http_method      = "POST"
-  authorization    = "NONE"
+  authorization    = "CUSTOM"
+  authorizer_id    = aws_api_gateway_authorizer.cognito_authorizer.id
 }
 
 resource "aws_api_gateway_integration" "mediaconvert_resource_api_get_presigned_url_method_integration" {
@@ -673,7 +773,8 @@ resource "aws_api_gateway_method" "mediaconvert_resource_api_get_records_method"
   resource_id      = aws_api_gateway_resource.mediaconvert_resource_api.id
   api_key_required = false
   http_method      = "GET"
-  authorization    = "NONE"
+  authorization    = "CUSTOM"
+  authorizer_id    = aws_api_gateway_authorizer.cognito_authorizer.id
 }
 
 resource "aws_api_gateway_integration" "mediaconvert_resource_api_get_records_method_integration" {
