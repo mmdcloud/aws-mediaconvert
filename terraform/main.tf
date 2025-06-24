@@ -1,7 +1,7 @@
 # MediaConvert SNS Configuration
 module "mediaconvert_sns" {
   source     = "./modules/sns"
-  topic_name = "mediaconvert_job_status_change_topic"
+  topic_name = "mediaconvert-job-status-change-topic"
   subscriptions = [
     {
       protocol = "email"
@@ -13,7 +13,7 @@ module "mediaconvert_sns" {
 # MediaConvert EventBridge Rule
 module "mediaconvert_eventbridge_rule" {
   source           = "./modules/eventbridge"
-  rule_name        = "mediaconvert_job_state_change_rule"
+  rule_name        = "mediaconvert-job-state-change-rule"
   rule_description = "It monitors the media convert job state change event"
   event_pattern = jsonencode({
     source = [
@@ -341,7 +341,7 @@ module "mediaconvert_function_iam_role" {
 # Lambda function to process media files
 module "mediaconvert_lambda_function" {
   source        = "./modules/lambda"
-  function_name = "mediaconvert_lambda_function"
+  function_name = "mediaconvert-lambda-function"
   role_arn      = module.mediaconvert_function_iam_role.arn
   env_variables = {
     REGION            = var.region
@@ -358,7 +358,7 @@ module "mediaconvert_lambda_function" {
 # Lambda function to get presigned url
 module "mediaconvert_get_presigned_url_function" {
   source        = "./modules/lambda"
-  function_name = "mediaconvert_get_presigned_url_function"
+  function_name = "mediaconvert-get-presigned-url-function"
   role_arn      = module.mediaconvert_function_iam_role.arn
   env_variables = {
     REGION = var.region
@@ -381,7 +381,7 @@ module "mediaconvert_get_presigned_url_function" {
 # Lambda function to get processed records from DynamoDB
 module "mediaconvert_get_records_function" {
   source        = "./modules/lambda"
-  function_name = "mediaconvert_get_records_function"
+  function_name = "mediaconvert-get-records-function"
   role_arn      = module.mediaconvert_function_iam_role.arn
   env_variables = {
     REGION = var.region
