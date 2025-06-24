@@ -123,8 +123,8 @@ module "mediaconvert_destination_bucket" {
   versioning_enabled = "Enabled"
   cors = [
     {
-      allowed_headers = ["*"]
-      allowed_methods = ["PUT", "POST", "GET"]
+      allowed_headers = ["${module.mediaconvert_cloudfront_distribution.domain_name}"]
+      allowed_methods = ["GET"]
       allowed_origins = ["*"]
       max_age_seconds = 3000
     }
@@ -248,7 +248,10 @@ module "mediaconvert_iam_role" {
         "Action": [
                 "s3:*"
             ],
-            "Resource": "*"
+            "Resource": [
+              "${module.mediaconvert_source_bucket.arn}/*",
+              "${module.mediaconvert_destination_bucket.arn}/*"
+            ]
         }
       ]
     }
@@ -360,6 +363,14 @@ module "mediaconvert_get_presigned_url_function" {
   env_variables = {
     REGION = var.region
   }
+  permissions = [
+    {
+      statement_id = "AllowAPIGatewayInvoke"
+      action       = "lambda:InvokeFunction"
+      principal    = "apigateway.amazonaws.com"
+      source_arn   = "${aws_api_gateway_rest_api.mediaconvert_rest_api.execution_arn}/*/*/*"
+    }
+  ]
   handler    = "get_presigned_url.lambda_handler"
   runtime    = "python3.12"
   s3_bucket  = module.mediaconvert_get_presigned_url_function_code_bucket.bucket
@@ -375,6 +386,14 @@ module "mediaconvert_get_records_function" {
   env_variables = {
     REGION = var.region
   }
+  permissions = [
+    {
+      statement_id = "AllowAPIGatewayInvoke"
+      action       = "lambda:InvokeFunction"
+      principal    = "apigateway.amazonaws.com"
+      source_arn   = "${aws_api_gateway_rest_api.mediaconvert_rest_api.execution_arn}/*/*/*"
+    }
+  ]
   handler    = "get_records.lambda_handler"
   runtime    = "python3.12"
   s3_bucket  = module.mediaconvert_get_records_function_code_bucket.bucket
@@ -567,7 +586,7 @@ data "aws_iam_policy_document" "instance_profile_policy_document" {
   statement {
     effect    = "Allow"
     actions   = ["s3:*"]
-    resources = ["*"]
+    resources = ["${module.mediaconvert_source_bucket.arn}/*"]
   }
   statement {
     effect    = "Allow"
