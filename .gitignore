@@ -1,4 +1,4 @@
-terraform/terraform.*
-terraform/.terraform*
+infra/terraform/terraform.*
+infra/terraform/.terraform*
 tf-backup
 .gitignore
