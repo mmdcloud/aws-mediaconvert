@@ -1,4 +1,3 @@
-from __future__ import print_function  # Python 2/3 compatibility
 import boto3
 import json
 from botocore.exceptions import ClientError
@@ -11,7 +10,7 @@ def lambda_handler(event,context):
     table_name = 'mediaconvert-records'
     records = []
     response = {}
-    try:    
+    try:
         # Get the first 1MB of data    
         response = dynamoDbClient.scan(
             TableName=table_name
@@ -19,17 +18,12 @@ def lambda_handler(event,context):
         if 'LastEvaluatedKey' in response:
             # Paginate returning up to 1MB of data for each iteration
             while 'LastEvaluatedKey' in response:
-                try:
-                    response = dynamoDbClient.scan(
-                        TableName=table_name,
-                        ExclusiveStartKey=response['LastEvaluatedKey']
-                    )
-                    # Track number of Items read
-                    records = response['Items']
-
-                except ClientError as error:
-                    print("Something went wrong: ")
-                    print(error.response['ResponseMetadata'])
+                response = dynamoDbClient.scan(
+                    TableName=table_name,
+                    ExclusiveStartKey=response['LastEvaluatedKey']
+                )
+                # Track number of Items read
+                records = response['Items']
 
         else:
             records = response['Items']

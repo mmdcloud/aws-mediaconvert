@@ -13,7 +13,7 @@ cd /home/ubuntu
 mkdir app
 # Checking out from Version Control
 git clone https://github.com/mmdcloud/aws-mediaconvert
-cd aws-mediaconvert/frontend
+cd aws-mediaconvert/src/frontend
 cp -r . /home/ubuntu/app/
 cd /home/ubuntu/app/
 # Copying Nginx config
