@@ -10,6 +10,7 @@ from botocore.client import ClientError
 
 def lambda_handler(event, context):
     dynamodb = boto3.client('dynamodb')
+    table_name = os.getenv('TABLE_NAME')
     assetID = str(uuid.uuid4())
     rec = json.loads(event['Records'][0]['body'])
     sourceS3Bucket = rec['Records'][0]['s3']['bucket']['name']
@@ -19,7 +20,7 @@ def lambda_handler(event, context):
     destinationS3 = 's3://' + os.environ['DestinationBucket']
     destinationS3basename = os.path.splitext(os.path.basename(destinationS3))[0]
     mediaConvertRole = os.environ['MediaConvertRole']
-    region = os.environ['REGION']
+    region = os.getenv('REGION')
     statusCode = 200
     body = {}
     
@@ -66,7 +67,7 @@ def lambda_handler(event, context):
         print (json.dumps(job, default=str))
         
         # Storing asset information in DynamoDB
-        dynamodb.put_item(TableName='mediaconvert-records', Item={'RecordId':{"S":assetID},'filename':{"S":sourceS3Key}})
+        dynamodb.put_item(TableName=table_name, Item={'RecordId':{"S":assetID},'filename':{"S":sourceS3Key}})
     except Exception as e:
         print ('Exception: %s' % e)
         statusCode = 500

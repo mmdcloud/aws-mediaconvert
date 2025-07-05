@@ -1,3 +1,7 @@
+resource "random_id" "random" {
+  byte_length = 8
+}
+
 # MediaConvert SNS Configuration
 module "mediaconvert_sns" {
   source     = "./modules/sns"
@@ -82,7 +86,7 @@ module "mediaconvert_sqs" {
 
 module "cognito" {
   source                     = "./modules/cognito"
-  name                       = "mediaconvert_users"
+  name                       = "mediaconvert-users"
   username_attributes        = ["email"]
   auto_verified_attributes   = ["email"]
   password_minimum_length    = 8
@@ -127,7 +131,7 @@ resource "aws_lambda_event_source_mapping" "sqs_event_trigger" {
 # MediaConvert Source Bucket
 module "mediaconvert_source_bucket" {
   source             = "./modules/s3"
-  bucket_name        = "mediaconvertsrcmadmax"
+  bucket_name        = "mediaconvert-src-${random_id.random.hex}"
   objects            = []
   versioning_enabled = "Enabled"
   bucket_notification = {
@@ -153,7 +157,7 @@ module "mediaconvert_source_bucket" {
 # MediaConvert Destination Bucket
 module "mediaconvert_destination_bucket" {
   source             = "./modules/s3"
-  bucket_name        = "mediaconvertdestmadmax"
+  bucket_name        = "mediaconvert-dest-${random_id.random.hex}"
   objects            = []
   versioning_enabled = "Enabled"
   cors = [
@@ -190,7 +194,7 @@ module "mediaconvert_destination_bucket" {
 # MediaConvert Function Code Bucket
 module "mediaconvert_function_code_bucket" {
   source      = "./modules/s3"
-  bucket_name = "mediaconvertfunctioncode"
+  bucket_name = "mediaconvert-function-code-${random_id.random.hex}"
   objects = [
     {
       key    = "convert_function.zip"
@@ -212,7 +216,7 @@ module "mediaconvert_function_code_bucket" {
 # MediaConvert Get Pre Signed Url Function Code Bucket
 module "mediaconvert_get_presigned_url_function_code_bucket" {
   source      = "./modules/s3"
-  bucket_name = "mediaconvertgetpresignedurlfunctioncode"
+  bucket_name = "mediaconvert-get-presigned-url-function-code-${random_id.random.hex}"
   objects = [
     {
       key    = "get_presigned_url.zip"
@@ -234,7 +238,7 @@ module "mediaconvert_get_presigned_url_function_code_bucket" {
 # MediaConvert Get Records Function Code Bucket
 module "mediaconvert_get_records_function_code_bucket" {
   source      = "./modules/s3"
-  bucket_name = "mediaconvertgetrecordsfunctioncode"
+  bucket_name = "mediaconvert-getrecords-code-${random_id.random.hex}"
   objects = [
     {
       key    = "get_records.zip"
@@ -256,7 +260,7 @@ module "mediaconvert_get_records_function_code_bucket" {
 # MediaConvert API Authorizer Function Code Bucket
 module "mediaconvert_api_authorizer_function_code_bucket" {
   source      = "./modules/s3"
-  bucket_name = "mediaconvertapiauthorizerfunctioncode"
+  bucket_name = "mediaconvert-apiauthorizer-code-${random_id.random.hex}"
   objects = [
     {
       key    = "api_authorizer.zip"
@@ -278,10 +282,10 @@ module "mediaconvert_api_authorizer_function_code_bucket" {
 # MediaConvert IAM Role
 module "mediaconvert_iam_role" {
   source             = "./modules/iam"
-  role_name          = "mediaconvert_iam_role"
-  role_description   = "mediaconvert_iam_role"
-  policy_name        = "mediaconvert_iam_policy"
-  policy_description = "mediaconvert_iam_policy"
+  role_name          = "mediaconvert-iam-role"
+  role_description   = "mediaconvert-iam-role"
+  policy_name        = "mediaconvert-iam-policy"
+  policy_description = "mediaconvert-iam-policy"
   assume_role_policy = <<EOF
     {
       "Version": "2012-10-17",
@@ -318,10 +322,10 @@ module "mediaconvert_iam_role" {
 # Lambda function IAM Role
 module "mediaconvert_function_iam_role" {
   source             = "./modules/iam"
-  role_name          = "mediaconvert_function_iam_role"
-  role_description   = "mediaconvert_function_iam_role"
-  policy_name        = "mediaconvert_function_iam_policy"
-  policy_description = "mediaconvert_function_iam_policy"
+  role_name          = "mediaconvert-function-iam-role"
+  role_description   = "mediaconvert-function-iam-role"
+  policy_name        = "mediaconvert-function-iam-policy"
+  policy_description = "mediaconvert-function-iam-policy"
   assume_role_policy = <<EOF
     {
         "Version": "2012-10-17",
@@ -410,8 +414,9 @@ module "mediaconvert_lambda_function" {
   role_arn      = module.mediaconvert_function_iam_role.arn
   env_variables = {
     REGION            = var.region
-    DestinationBucket = module.mediaconvert_destination_bucket.bucket
-    MediaConvertRole  = module.mediaconvert_iam_role.arn
+    DestinationBucket = "${module.mediaconvert_destination_bucket.bucket}"
+    MediaConvertRole  = "${module.mediaconvert_iam_role.arn}"
+    TABLE_NAME = "${module.mediaconvert_dynamodb.name}"
   }
   handler    = "convert_function.lambda_handler"
   runtime    = "python3.12"
@@ -427,6 +432,7 @@ module "mediaconvert_get_presigned_url_function" {
   role_arn      = module.mediaconvert_function_iam_role.arn
   env_variables = {
     REGION = var.region
+    SRC_BUCKET = "${module.mediaconvert_source_bucket.bucket}"
   }
   permissions = [
     {
@@ -450,6 +456,7 @@ module "mediaconvert_get_records_function" {
   role_arn      = module.mediaconvert_function_iam_role.arn
   env_variables = {
     REGION = var.region
+    TABLE_NAME = "${module.mediaconvert_dynamodb.name}"
   }
   permissions = [
     {

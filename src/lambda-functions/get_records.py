@@ -1,13 +1,13 @@
 import boto3
 import json
 from botocore.exceptions import ClientError
-
+import os
 # Create Client
 session = boto3.session.Session()
 dynamoDbClient = session.client('dynamodb')
+table_name = os.getenv('TABLE_NAME')
 
 def lambda_handler(event,context):
-    table_name = 'mediaconvert-records'
     records = []
     response = {}
     try:
