@@ -2,3 +2,5 @@ infra/terraform/terraform.*
 infra/terraform/.terraform*
 tf-backup
 .gitignore
+src/frontend/node_modules
+src/frontend/.bolt
