@@ -9,7 +9,7 @@ module "mediaconvert_sns" {
   subscriptions = [
     {
       protocol = "email"
-      endpoint = "madmaxcloudonline@gmail.com"
+      endpoint = var.notification_email
     }
   ]
 }
@@ -345,17 +345,17 @@ module "mediaconvert_function_iam_role" {
     {
       "Version": "2012-10-17",
       "Statement": [
-      {
-          "Action": [
-            "logs:CreateLogGroup",
-            "logs:CreateLogStream",
-            "logs:PutLogEvents",
-            "mediaconvert:*"
-          ],
-          "Resource": "arn:aws:logs:*:*:*",
-          "Effect": "Allow"
-      },
-      {
+          {
+              "Action": [
+                "logs:CreateLogGroup",
+                "logs:CreateLogStream",
+                "logs:PutLogEvents",
+                "mediaconvert:*"
+              ],
+              "Resource": "arn:aws:logs:*:*:*",
+              "Effect": "Allow"
+          },
+          {
               "Effect": "Allow",
               "Action": [
                   "mediaconvert:*",
@@ -416,7 +416,7 @@ module "mediaconvert_lambda_function" {
     REGION            = var.region
     DestinationBucket = "${module.mediaconvert_destination_bucket.bucket}"
     MediaConvertRole  = "${module.mediaconvert_iam_role.arn}"
-    TABLE_NAME = "${module.mediaconvert_dynamodb.name}"
+    TABLE_NAME        = "${module.mediaconvert_dynamodb.name}"
   }
   handler    = "convert_function.lambda_handler"
   runtime    = "python3.12"
@@ -431,7 +431,7 @@ module "mediaconvert_get_presigned_url_function" {
   function_name = "mediaconvert-get-presigned-url-function"
   role_arn      = module.mediaconvert_function_iam_role.arn
   env_variables = {
-    REGION = var.region
+    REGION     = var.region
     SRC_BUCKET = "${module.mediaconvert_source_bucket.bucket}"
   }
   permissions = [
@@ -455,7 +455,7 @@ module "mediaconvert_get_records_function" {
   function_name = "mediaconvert-get-records-function"
   role_arn      = module.mediaconvert_function_iam_role.arn
   env_variables = {
-    REGION = var.region
+    REGION     = var.region
     TABLE_NAME = "${module.mediaconvert_dynamodb.name}"
   }
   permissions = [
