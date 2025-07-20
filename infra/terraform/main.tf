@@ -533,19 +533,19 @@ module "mediaconvert_cloudfront_distribution" {
 }
 
 # Frontend Module
-data "aws_ami" "ubuntu" {
-  most_recent = true
-  owners      = ["amazon"]
-  filter {
-    name   = "name"
-    values = ["ubuntu/images/hvm-ssd/ubuntu-jammy-22.04-amd64-*"]
-  }
+# data "aws_ami" "ubuntu" {
+#   most_recent = true
+#   owners      = ["amazon"]
+#   filter {
+#     name   = "name"
+#     values = ["ubuntu/images/hvm-ssd/ubuntu-jammy-22.04-amd64-*"]
+#   }
 
-  filter {
-    name   = "virtualization-type"
-    values = ["hvm"]
-  }
-}
+#   filter {
+#     name   = "virtualization-type"
+#     values = ["hvm"]
+#   }
+# }
 
 # VPC Configuration
 module "vpc" {
@@ -660,59 +660,134 @@ module "private_rt" {
 }
 
 # EC2 IAM Instance Profile
-data "aws_iam_policy_document" "instance_profile_assume_role" {
-  statement {
-    effect = "Allow"
+# data "aws_iam_policy_document" "instance_profile_assume_role" {
+#   statement {
+#     effect = "Allow"
 
-    principals {
-      type        = "Service"
-      identifiers = ["ec2.amazonaws.com"]
+#     principals {
+#       type        = "Service"
+#       identifiers = ["ec2.amazonaws.com"]
+#     }
+
+#     actions = ["sts:AssumeRole"]
+#   }
+# }
+
+# resource "aws_iam_role" "instance_profile_iam_role" {
+#   name               = "mediaconvert-instance-profile-role"
+#   path               = "/"
+#   assume_role_policy = data.aws_iam_policy_document.instance_profile_assume_role.json
+# }
+
+# data "aws_iam_policy_document" "instance_profile_policy_document" {
+#   statement {
+#     effect    = "Allow"
+#     actions   = ["s3:*"]
+#     resources = ["${module.mediaconvert_source_bucket.arn}/*"]
+#   }
+#   statement {
+#     effect    = "Allow"
+#     actions   = ["cloudwatch:*"]
+#     resources = ["*"]
+#   }
+# }
+
+# resource "aws_iam_role_policy" "instance_profile_s3_policy" {
+#   role   = aws_iam_role.instance_profile_iam_role.name
+#   policy = data.aws_iam_policy_document.instance_profile_policy_document.json
+# }
+
+# resource "aws_iam_instance_profile" "iam_instance_profile" {
+#   name = "mediaconvert-iam-instance-profile"
+#   role = aws_iam_role.instance_profile_iam_role.name
+# }
+
+# module "mediaconvert_frontend_instance" {
+#   source                      = "./modules/ec2"
+#   name                        = "mediaconvert-frontend-instance"
+#   ami_id                      = data.aws_ami.ubuntu.id
+#   instance_type               = "t2.micro"
+#   key_name                    = "madmaxkeypair"
+#   associate_public_ip_address = true
+#   user_data                   = filebase64("${path.module}/scripts/user_data.sh")
+#   instance_profile            = aws_iam_instance_profile.iam_instance_profile.name
+#   subnet_id                   = module.public_subnets.subnets[0].id
+#   security_groups             = [module.security_group.id]
+# }
+
+# Next.js application bucket
+module "mediaconvert_frontend_bucket" {
+  source             = "./modules/s3"
+  bucket_name        = "mediaconvert-frontend-${random_id.random.hex}"
+  objects            = []
+  versioning_enabled = "Enabled"
+  bucket_notification = {
+    queue           = []
+    lambda_function = []
+  }
+  cors = [
+    {
+      allowed_headers = ["${module.mediaconvert_frontend_cloudfront_distribution.domain_name}"]
+      allowed_methods = ["GET"]
+      allowed_origins = ["*"]
+      max_age_seconds = 3000
     }
-
-    actions = ["sts:AssumeRole"]
-  }
+  ]
+  force_destroy = true
+  bucket_policy = jsonencode({
+    "Version" : "2012-10-17",
+    "Id" : "PolicyForCloudFrontPrivateContent",
+    "Statement" : [
+      {
+        "Sid" : "AllowCloudFrontServicePrincipal",
+        "Effect" : "Allow",
+        "Principal" : {
+          "Service" : "cloudfront.amazonaws.com"
+        },
+        "Action" : "s3:GetObject",
+        "Resource" : "${module.mediaconvert_frontend_bucket.arn}/*",
+        "Condition" : {
+          "StringEquals" : {
+            "AWS:SourceArn" : "${module.mediaconvert_frontend_cloudfront_distribution.arn}"
+          }
+        }
+      }
+    ]
+  })
 }
 
-resource "aws_iam_role" "instance_profile_iam_role" {
-  name               = "mediaconvert-instance-profile-role"
-  path               = "/"
-  assume_role_policy = data.aws_iam_policy_document.instance_profile_assume_role.json
-}
-
-data "aws_iam_policy_document" "instance_profile_policy_document" {
-  statement {
-    effect    = "Allow"
-    actions   = ["s3:*"]
-    resources = ["${module.mediaconvert_source_bucket.arn}/*"]
-  }
-  statement {
-    effect    = "Allow"
-    actions   = ["cloudwatch:*"]
-    resources = ["*"]
-  }
-}
-
-resource "aws_iam_role_policy" "instance_profile_s3_policy" {
-  role   = aws_iam_role.instance_profile_iam_role.name
-  policy = data.aws_iam_policy_document.instance_profile_policy_document.json
-}
-
-resource "aws_iam_instance_profile" "iam_instance_profile" {
-  name = "mediaconvert-iam-instance-profile"
-  role = aws_iam_role.instance_profile_iam_role.name
-}
-
-module "mediaconvert_frontend_instance" {
-  source                      = "./modules/ec2"
-  name                        = "mediaconvert-frontend-instance"
-  ami_id                      = data.aws_ami.ubuntu.id
-  instance_type               = "t2.micro"
-  key_name                    = "madmaxkeypair"
-  associate_public_ip_address = true
-  user_data                   = filebase64("${path.module}/scripts/user_data.sh")
-  instance_profile            = aws_iam_instance_profile.iam_instance_profile.name
-  subnet_id                   = module.public_subnets.subnets[0].id
-  security_groups             = [module.security_group.id]
+# MediaConvert Cloudfront distribution
+module "mediaconvert_frontend_cloudfront_distribution" {
+  source                                = "./modules/cloudfront"
+  distribution_name                     = "mediaconvert_cdn_frontend"
+  oac_name                              = "mediaconvert_cdn_frontend_oac"
+  oac_description                       = "mediaconvert_cdn_frontend_oac"
+  oac_origin_access_control_origin_type = "s3"
+  oac_signing_behavior                  = "always"
+  oac_signing_protocol                  = "sigv4"
+  enabled                               = true
+  origin = [
+    {
+      origin_id           = "mediaconvertfrontendorigin"
+      domain_name         = "mediaconvertfrontendorigin.s3.${var.region}.amazonaws.com"
+      connection_attempts = 3
+      connection_timeout  = 10
+    }
+  ]
+  compress                       = true
+  smooth_streaming               = false
+  target_origin_id               = "mediaconvertfrontendorigin"
+  allowed_methods                = ["GET", "HEAD"]
+  cached_methods                 = ["GET", "HEAD"]
+  viewer_protocol_policy         = "redirect-to-https"
+  min_ttl                        = 0
+  default_ttl                    = 0
+  max_ttl                        = 0
+  price_class                    = "PriceClass_200"
+  forward_cookies                = "all"
+  cloudfront_default_certificate = true
+  geo_restriction_type           = "none"
+  query_string                   = true
 }
 
 # API Gateway configuration

@@ -3,5 +3,5 @@ output "api_gateway_url" {
 }
 
 output "frontend_url" {
-  value = module.mediaconvert_frontend_instance.public_ip
+  value = module.mediaconvert_frontend_cloudfront_distribution.domain_name
 }
