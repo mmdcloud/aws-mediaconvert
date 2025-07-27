@@ -5,7 +5,7 @@ resource "random_id" "random" {
 # MediaConvert SNS Configuration
 module "mediaconvert_sns" {
   source     = "./modules/sns"
-  topic_name = "mediaconvert-job-status-change-topic"
+  topic_name = "mediaconvert-job-status-change-topic-${var.env}"
   subscriptions = [
     {
       protocol = "email"
@@ -17,7 +17,7 @@ module "mediaconvert_sns" {
 # MediaConvert EventBridge Rule
 module "mediaconvert_eventbridge_rule" {
   source           = "./modules/eventbridge"
-  rule_name        = "mediaconvert-job-state-change-rule"
+  rule_name        = "mediaconvert-job-state-change-rule-${var.env}"
   rule_description = "It monitors the media convert job state change event"
   event_pattern = jsonencode({
     source = [
@@ -34,7 +34,7 @@ module "mediaconvert_eventbridge_rule" {
 # DynamoDB Table
 module "mediaconvert_dynamodb" {
   source = "./modules/dynamodb"
-  name   = "mediaconvert-records"
+  name   = "mediaconvert-records-${var.env}"
   attributes = [
     {
       name = "RecordId"
@@ -57,11 +57,11 @@ module "mediaconvert_dynamodb" {
 # MediaConvert SQS
 module "mediaconvert_sqs" {
   source                        = "./modules/sqs"
-  queue_name                    = "mediaconvert-process-queue"
+  queue_name                    = "mediaconvert-process-queue-${var.env}"
   delay_seconds                 = 0
   maxReceiveCount               = 3
   dlq_message_retention_seconds = 86400
-  dlq_name                      = "mediaconvert-process-dlq"
+  dlq_name                      = "mediaconvert-process-dlq-${var.env}"
   max_message_size              = 262144
   message_retention_seconds     = 345600
   visibility_timeout_seconds    = 180
@@ -73,7 +73,7 @@ module "mediaconvert_sqs" {
         Effect    = "Allow"
         Principal = { Service = "s3.amazonaws.com" }
         Action    = "sqs:SendMessage"
-        Resource  = "arn:aws:sqs:${var.region}:*:mediaconvert-process-queue"
+        Resource  = "arn:aws:sqs:${var.region}:*:mediaconvert-process-queue-${var.env}"
         Condition = {
           ArnEquals = {
             "aws:SourceArn" = module.mediaconvert_source_bucket.arn
@@ -86,7 +86,7 @@ module "mediaconvert_sqs" {
 
 module "cognito" {
   source                     = "./modules/cognito"
-  name                       = "mediaconvert-users"
+  name                       = "mediaconvert-users-${var.env}"
   username_attributes        = ["email"]
   auto_verified_attributes   = ["email"]
   password_minimum_length    = 8
@@ -131,7 +131,7 @@ resource "aws_lambda_event_source_mapping" "sqs_event_trigger" {
 # MediaConvert Source Bucket
 module "mediaconvert_source_bucket" {
   source             = "./modules/s3"
-  bucket_name        = "mediaconvert-src-${random_id.random.hex}"
+  bucket_name        = "mediaconvert-src-${var.env}"
   objects            = []
   versioning_enabled = "Enabled"
   bucket_notification = {
@@ -157,7 +157,7 @@ module "mediaconvert_source_bucket" {
 # MediaConvert Destination Bucket
 module "mediaconvert_destination_bucket" {
   source             = "./modules/s3"
-  bucket_name        = "mediaconvert-dest-${random_id.random.hex}"
+  bucket_name        = "mediaconvert-dest-${var.env}"
   objects            = []
   versioning_enabled = "Enabled"
   cors = [
@@ -194,7 +194,7 @@ module "mediaconvert_destination_bucket" {
 # MediaConvert Function Code Bucket
 module "mediaconvert_function_code_bucket" {
   source      = "./modules/s3"
-  bucket_name = "mediaconvert-function-code-${random_id.random.hex}"
+  bucket_name = "mediaconvert-function-code-${var.env}"
   objects = [
     {
       key    = "convert_function.zip"
@@ -216,7 +216,7 @@ module "mediaconvert_function_code_bucket" {
 # MediaConvert Get Pre Signed Url Function Code Bucket
 module "mediaconvert_get_presigned_url_function_code_bucket" {
   source      = "./modules/s3"
-  bucket_name = "mediaconvert-get-presigned-url-function-code-${random_id.random.hex}"
+  bucket_name = "mediaconvert-get-presigned-url-function-code-${var.env}"
   objects = [
     {
       key    = "get_presigned_url.zip"
@@ -238,7 +238,7 @@ module "mediaconvert_get_presigned_url_function_code_bucket" {
 # MediaConvert Get Records Function Code Bucket
 module "mediaconvert_get_records_function_code_bucket" {
   source      = "./modules/s3"
-  bucket_name = "mediaconvert-getrecords-code-${random_id.random.hex}"
+  bucket_name = "mediaconvert-getrecords-code-${var.env}"
   objects = [
     {
       key    = "get_records.zip"
@@ -260,7 +260,7 @@ module "mediaconvert_get_records_function_code_bucket" {
 # MediaConvert API Authorizer Function Code Bucket
 module "mediaconvert_api_authorizer_function_code_bucket" {
   source      = "./modules/s3"
-  bucket_name = "mediaconvert-apiauthorizer-code-${random_id.random.hex}"
+  bucket_name = "mediaconvert-apiauthorizer-code-${var.env}"
   objects = [
     {
       key    = "api_authorizer.zip"
@@ -282,10 +282,10 @@ module "mediaconvert_api_authorizer_function_code_bucket" {
 # MediaConvert IAM Role
 module "mediaconvert_iam_role" {
   source             = "./modules/iam"
-  role_name          = "mediaconvert-iam-role"
-  role_description   = "mediaconvert-iam-role"
-  policy_name        = "mediaconvert-iam-policy"
-  policy_description = "mediaconvert-iam-policy"
+  role_name          = "mediaconvert-iam-role-${var.env}"
+  role_description   = "mediaconvert-iam-role-${var.env}"
+  policy_name        = "mediaconvert-iam-policy-${var.env}"
+  policy_description = "mediaconvert-iam-policy-${var.env}"
   assume_role_policy = <<EOF
     {
       "Version": "2012-10-17",
@@ -322,10 +322,10 @@ module "mediaconvert_iam_role" {
 # Lambda function IAM Role
 module "mediaconvert_function_iam_role" {
   source             = "./modules/iam"
-  role_name          = "mediaconvert-function-iam-role"
-  role_description   = "mediaconvert-function-iam-role"
-  policy_name        = "mediaconvert-function-iam-policy"
-  policy_description = "mediaconvert-function-iam-policy"
+  role_name          = "mediaconvert-function-iam-role-${var.env}"
+  role_description   = "mediaconvert-function-iam-role-${var.env}"
+  policy_name        = "mediaconvert-function-iam-policy-${var.env}"
+  policy_description = "mediaconvert-function-iam-policy-${var.env}"
   assume_role_policy = <<EOF
     {
         "Version": "2012-10-17",
@@ -410,7 +410,7 @@ module "mediaconvert_function_iam_role" {
 # Lambda function to process media files
 module "mediaconvert_lambda_function" {
   source        = "./modules/lambda"
-  function_name = "mediaconvert-lambda-function"
+  function_name = "mediaconvert-lambda-function-${var.env}"
   role_arn      = module.mediaconvert_function_iam_role.arn
   env_variables = {
     REGION            = var.region
@@ -428,7 +428,7 @@ module "mediaconvert_lambda_function" {
 # Lambda function to get presigned url
 module "mediaconvert_get_presigned_url_function" {
   source        = "./modules/lambda"
-  function_name = "mediaconvert-get-presigned-url-function"
+  function_name = "mediaconvert-get-presigned-url-function-${var.env}"
   role_arn      = module.mediaconvert_function_iam_role.arn
   env_variables = {
     REGION     = var.region
@@ -452,7 +452,7 @@ module "mediaconvert_get_presigned_url_function" {
 # Lambda function to get processed records from DynamoDB
 module "mediaconvert_get_records_function" {
   source        = "./modules/lambda"
-  function_name = "mediaconvert-get-records-function"
+  function_name = "mediaconvert-get-records-function-${var.env}"
   role_arn      = module.mediaconvert_function_iam_role.arn
   env_variables = {
     REGION     = var.region
@@ -476,7 +476,7 @@ module "mediaconvert_get_records_function" {
 # Lambda authorizer function for API Gateway
 module "mediaconvert_api_authorizer_function" {
   source        = "./modules/lambda"
-  function_name = "mediaconvert-api-authorizer-function"
+  function_name = "mediaconvert-api-authorizer-function-${var.env}"
   role_arn      = module.mediaconvert_function_iam_role.arn
   env_variables = {
     USER_POOL_ID  = module.cognito.user_pool_id
@@ -501,24 +501,24 @@ module "mediaconvert_api_authorizer_function" {
 # MediaConvert Cloudfront distribution
 module "mediaconvert_cloudfront_distribution" {
   source                                = "./modules/cloudfront"
-  distribution_name                     = "mediaconvert_cdn"
-  oac_name                              = "mediaconvert_cdn_oac"
-  oac_description                       = "mediaconvert_cdn_oac"
+  distribution_name                     = "mediaconvert_cdn-${var.env}"
+  oac_name                              = "mediaconvert_cdn_oac-${var.env}"
+  oac_description                       = "mediaconvert_cdn_oac-${var.env}"
   oac_origin_access_control_origin_type = "s3"
   oac_signing_behavior                  = "always"
   oac_signing_protocol                  = "sigv4"
   enabled                               = true
   origin = [
     {
-      origin_id           = "mediaconvertdestmadmax"
-      domain_name         = "mediaconvertdestmadmax.s3.${var.region}.amazonaws.com"
+      origin_id           = "mediaconvertdestmadmax-${var.env}"
+      domain_name         = "mediaconvertdestmadmax-${var.env}.s3.${var.region}.amazonaws.com"
       connection_attempts = 3
       connection_timeout  = 10
     }
   ]
   compress                       = true
   smooth_streaming               = false
-  target_origin_id               = "mediaconvertdestmadmax"
+  target_origin_id               = "mediaconvertdestmadmax-${var.env}"
   allowed_methods                = ["GET", "HEAD"]
   cached_methods                 = ["GET", "HEAD"]
   viewer_protocol_policy         = "redirect-to-https"
@@ -550,7 +550,7 @@ module "mediaconvert_cloudfront_distribution" {
 # VPC Configuration
 module "vpc" {
   source                = "./modules/vpc/vpc"
-  vpc_name              = "mediaconvert-vpc"
+  vpc_name              = "mediaconvert-vpc-${var.env}"
   vpc_cidr_block        = "10.0.0.0/16"
   enable_dns_hostnames  = true
   enable_dns_support    = true
@@ -561,7 +561,7 @@ module "vpc" {
 module "security_group" {
   source = "./modules/vpc/security_groups"
   vpc_id = module.vpc.vpc_id
-  name   = "mediaconvert-security-group"
+  name   = "mediaconvert-security-group-${var.env}"
   ingress = [
     {
       from_port       = 80
@@ -595,7 +595,7 @@ module "security_group" {
 # Public Subnets
 module "public_subnets" {
   source = "./modules/vpc/subnets"
-  name   = "mediaconvert-public-subnet"
+  name   = "mediaconvert-public-subnet-${var.env}"
   subnets = [
     {
       subnet = "10.0.1.0/24"
@@ -617,7 +617,7 @@ module "public_subnets" {
 # Private Subnets
 module "private_subnets" {
   source = "./modules/vpc/subnets"
-  name   = "mediaconvert-private-subnet"
+  name   = "mediaconvert-private-subnet-${var.env}"
   subnets = [
     {
       subnet = "10.0.6.0/24"
@@ -639,7 +639,7 @@ module "private_subnets" {
 # Public Route Table
 module "public_rt" {
   source  = "./modules/vpc/route_tables"
-  name    = "mediaconvert-public-route-table"
+  name    = "mediaconvert-public-route-table-${var.env}"
   subnets = module.public_subnets.subnets[*]
   routes = [
     {
@@ -653,7 +653,7 @@ module "public_rt" {
 # Private Route Table
 module "private_rt" {
   source  = "./modules/vpc/route_tables"
-  name    = "mediaconvert-private-route-table"
+  name    = "mediaconvert-private-route-table-${var.env}"
   subnets = module.private_subnets.subnets[*]
   routes  = []
   vpc_id  = module.vpc.vpc_id
@@ -718,7 +718,7 @@ module "private_rt" {
 # Next.js application bucket
 module "mediaconvert_frontend_bucket" {
   source             = "./modules/s3"
-  bucket_name        = "mediaconvert-frontend-${random_id.random.hex}"
+  bucket_name        = "mediaconvert-frontend-${var.env}"
   objects            = []
   versioning_enabled = "Enabled"
   bucket_notification = {
@@ -759,24 +759,24 @@ module "mediaconvert_frontend_bucket" {
 # MediaConvert Cloudfront distribution
 module "mediaconvert_frontend_cloudfront_distribution" {
   source                                = "./modules/cloudfront"
-  distribution_name                     = "mediaconvert_cdn_frontend"
-  oac_name                              = "mediaconvert_cdn_frontend_oac"
-  oac_description                       = "mediaconvert_cdn_frontend_oac"
+  distribution_name                     = "mediaconvert_cdn_frontend-${var.env}"
+  oac_name                              = "mediaconvert_cdn_frontend_oac-${var.env}"
+  oac_description                       = "mediaconvert_cdn_frontend_oac-${var.env}"
   oac_origin_access_control_origin_type = "s3"
   oac_signing_behavior                  = "always"
   oac_signing_protocol                  = "sigv4"
   enabled                               = true
   origin = [
     {
-      origin_id           = "mediaconvertfrontendorigin"
-      domain_name         = "mediaconvertfrontendorigin.s3.${var.region}.amazonaws.com"
+      origin_id           = "mediaconvertfrontendorigin-${var.env}"
+      domain_name         = "mediaconvertfrontendorigin-${var.env}.s3.${var.region}.amazonaws.com"
       connection_attempts = 3
       connection_timeout  = 10
     }
   ]
   compress                       = true
   smooth_streaming               = false
-  target_origin_id               = "mediaconvertfrontendorigin"
+  target_origin_id               = "mediaconvertfrontendorigin-${var.env}"
   allowed_methods                = ["GET", "HEAD"]
   cached_methods                 = ["GET", "HEAD"]
   viewer_protocol_policy         = "redirect-to-https"
@@ -792,7 +792,7 @@ module "mediaconvert_frontend_cloudfront_distribution" {
 
 # API Gateway configuration
 resource "aws_api_gateway_rest_api" "mediaconvert_rest_api" {
-  name = "mediaconvert-api"
+  name = "mediaconvert-api-${var.env}"
   endpoint_configuration {
     types = ["REGIONAL"]
   }
@@ -902,5 +902,5 @@ resource "aws_api_gateway_deployment" "mediaconvert_api_deployment" {
 resource "aws_api_gateway_stage" "mediaconvert_api_stage" {
   deployment_id = aws_api_gateway_deployment.mediaconvert_api_deployment.id
   rest_api_id   = aws_api_gateway_rest_api.mediaconvert_rest_api.id
-  stage_name    = "dev"
+  stage_name    = "${var.env}"
 }
