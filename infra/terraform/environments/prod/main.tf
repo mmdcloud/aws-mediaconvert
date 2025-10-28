@@ -2,7 +2,9 @@ resource "random_id" "random" {
   byte_length = 8
 }
 
-# MediaConvert SNS Configuration
+# -------------------------------------------------------------------------
+# SNS Configuration
+# -------------------------------------------------------------------------
 module "mediaconvert_sns" {
   source     = "./modules/sns"
   topic_name = "mediaconvert-job-status-change-topic-${var.env}"
@@ -14,7 +16,9 @@ module "mediaconvert_sns" {
   ]
 }
 
-# MediaConvert EventBridge Rule
+# -------------------------------------------------------------------------
+# EventBridge Rule
+# -------------------------------------------------------------------------
 module "mediaconvert_eventbridge_rule" {
   source           = "./modules/eventbridge"
   rule_name        = "mediaconvert-job-state-change-rule-${var.env}"
@@ -31,7 +35,9 @@ module "mediaconvert_eventbridge_rule" {
   target_arn = module.mediaconvert_sns.topic_arn
 }
 
+# -------------------------------------------------------------------------
 # DynamoDB Table
+# -------------------------------------------------------------------------
 module "mediaconvert_dynamodb" {
   source = "./modules/dynamodb"
   name   = "mediaconvert-records-${var.env}"
@@ -54,7 +60,9 @@ module "mediaconvert_dynamodb" {
   ttl_attribute_enabled = true
 }
 
-# MediaConvert SQS
+# -------------------------------------------------------------------------
+# SQS configuration
+# -------------------------------------------------------------------------
 module "mediaconvert_sqs" {
   source                        = "./modules/sqs"
   queue_name                    = "mediaconvert-process-queue-${var.env}"
@@ -84,6 +92,9 @@ module "mediaconvert_sqs" {
   })
 }
 
+# -------------------------------------------------------------------------
+# Cognito configuration
+# -------------------------------------------------------------------------
 module "cognito" {
   source                     = "./modules/cognito"
   name                       = "mediaconvert-users-${var.env}"
@@ -128,6 +139,9 @@ resource "aws_lambda_event_source_mapping" "sqs_event_trigger" {
   maximum_batching_window_in_seconds = 60
 }
 
+# -------------------------------------------------------------------------
+# S3 Configuration
+# -------------------------------------------------------------------------
 # MediaConvert Source Bucket
 module "mediaconvert_source_bucket" {
   source             = "./modules/s3"
@@ -279,6 +293,9 @@ module "mediaconvert_api_authorizer_function_code_bucket" {
   force_destroy = true
 }
 
+# -------------------------------------------------------------------------
+# IAM Configuration
+# -------------------------------------------------------------------------
 # MediaConvert IAM Role
 module "mediaconvert_iam_role" {
   source             = "./modules/iam"
@@ -407,6 +424,9 @@ module "mediaconvert_function_iam_role" {
     EOF
 }
 
+# -------------------------------------------------------------------------
+# Lambda Configuration
+# -------------------------------------------------------------------------
 # Lambda function to process media files
 module "mediaconvert_lambda_function" {
   source        = "./modules/lambda"
@@ -498,7 +518,9 @@ module "mediaconvert_api_authorizer_function" {
   depends_on = [module.mediaconvert_api_authorizer_function_code_bucket]
 }
 
-# MediaConvert Cloudfront distribution
+# -------------------------------------------------------------------------
+# Cloudfront distribution
+# -------------------------------------------------------------------------
 module "mediaconvert_cloudfront_distribution" {
   source                                = "./modules/cloudfront"
   distribution_name                     = "mediaconvert_cdn-${var.env}"
@@ -532,188 +554,28 @@ module "mediaconvert_cloudfront_distribution" {
   query_string                   = true
 }
 
-# Frontend Module
-# data "aws_ami" "ubuntu" {
-#   most_recent = true
-#   owners      = ["amazon"]
-#   filter {
-#     name   = "name"
-#     values = ["ubuntu/images/hvm-ssd/ubuntu-jammy-22.04-amd64-*"]
-#   }
-
-#   filter {
-#     name   = "virtualization-type"
-#     values = ["hvm"]
-#   }
-# }
-
+# -------------------------------------------------------------------------
 # VPC Configuration
+# -------------------------------------------------------------------------
 module "vpc" {
-  source                = "./modules/vpc/vpc"
-  vpc_name              = "mediaconvert-vpc-${var.env}"
-  vpc_cidr_block        = "10.0.0.0/16"
-  enable_dns_hostnames  = true
-  enable_dns_support    = true
-  internet_gateway_name = "vpc_igw"
-}
-
-# Security Group
-module "security_group" {
-  source = "./modules/vpc/security_groups"
-  vpc_id = module.vpc.vpc_id
-  name   = "mediaconvert-security-group-${var.env}"
-  ingress = [
-    {
-      from_port       = 80
-      to_port         = 80
-      protocol        = "tcp"
-      self            = "false"
-      cidr_blocks     = ["0.0.0.0/0"]
-      security_groups = []
-      description     = "any"
-    },
-    {
-      from_port       = 22
-      to_port         = 22
-      protocol        = "tcp"
-      self            = "false"
-      cidr_blocks     = ["0.0.0.0/0"]
-      security_groups = []
-      description     = "any"
-    }
-  ]
-  egress = [
-    {
-      from_port   = 0
-      to_port     = 0
-      protocol    = "-1"
-      cidr_blocks = ["0.0.0.0/0"]
-    }
-  ]
-}
-
-# Public Subnets
-module "public_subnets" {
-  source = "./modules/vpc/subnets"
-  name   = "mediaconvert-public-subnet-${var.env}"
-  subnets = [
-    {
-      subnet = "10.0.1.0/24"
-      az     = "us-east-1a"
-    },
-    {
-      subnet = "10.0.2.0/24"
-      az     = "us-east-1b"
-    },
-    {
-      subnet = "10.0.3.0/24"
-      az     = "us-east-1c"
-    }
-  ]
-  vpc_id                  = module.vpc.vpc_id
+  source = "./modules/vpc"
+  vpc_name = "vpc-${var.env}-${var.region}"
+  vpc_cidr = "10.0.0.0/16"
+  azs             = var.azs
+  public_subnets  = var.public_subnets
+  private_subnets = var.private_subnets
+  enable_dns_hostnames = true
+  enable_dns_support   = true
+  create_igw = true
   map_public_ip_on_launch = true
+  enable_nat_gateway     = true
+  single_nat_gateway     = false
+  one_nat_gateway_per_az = true
+  tags = {
+    Environment = "${var.env}"
+    Project     = "carshub"
+  }
 }
-
-# Private Subnets
-module "private_subnets" {
-  source = "./modules/vpc/subnets"
-  name   = "mediaconvert-private-subnet-${var.env}"
-  subnets = [
-    {
-      subnet = "10.0.6.0/24"
-      az     = "us-east-1a"
-    },
-    {
-      subnet = "10.0.5.0/24"
-      az     = "us-east-1b"
-    },
-    {
-      subnet = "10.0.4.0/24"
-      az     = "us-east-1c"
-    }
-  ]
-  vpc_id                  = module.vpc.vpc_id
-  map_public_ip_on_launch = false
-}
-
-# Public Route Table
-module "public_rt" {
-  source  = "./modules/vpc/route_tables"
-  name    = "mediaconvert-public-route-table-${var.env}"
-  subnets = module.public_subnets.subnets[*]
-  routes = [
-    {
-      cidr_block = "0.0.0.0/0"
-      gateway_id = module.vpc.igw_id
-    }
-  ]
-  vpc_id = module.vpc.vpc_id
-}
-
-# Private Route Table
-module "private_rt" {
-  source  = "./modules/vpc/route_tables"
-  name    = "mediaconvert-private-route-table-${var.env}"
-  subnets = module.private_subnets.subnets[*]
-  routes  = []
-  vpc_id  = module.vpc.vpc_id
-}
-
-# EC2 IAM Instance Profile
-# data "aws_iam_policy_document" "instance_profile_assume_role" {
-#   statement {
-#     effect = "Allow"
-
-#     principals {
-#       type        = "Service"
-#       identifiers = ["ec2.amazonaws.com"]
-#     }
-
-#     actions = ["sts:AssumeRole"]
-#   }
-# }
-
-# resource "aws_iam_role" "instance_profile_iam_role" {
-#   name               = "mediaconvert-instance-profile-role"
-#   path               = "/"
-#   assume_role_policy = data.aws_iam_policy_document.instance_profile_assume_role.json
-# }
-
-# data "aws_iam_policy_document" "instance_profile_policy_document" {
-#   statement {
-#     effect    = "Allow"
-#     actions   = ["s3:*"]
-#     resources = ["${module.mediaconvert_source_bucket.arn}/*"]
-#   }
-#   statement {
-#     effect    = "Allow"
-#     actions   = ["cloudwatch:*"]
-#     resources = ["*"]
-#   }
-# }
-
-# resource "aws_iam_role_policy" "instance_profile_s3_policy" {
-#   role   = aws_iam_role.instance_profile_iam_role.name
-#   policy = data.aws_iam_policy_document.instance_profile_policy_document.json
-# }
-
-# resource "aws_iam_instance_profile" "iam_instance_profile" {
-#   name = "mediaconvert-iam-instance-profile"
-#   role = aws_iam_role.instance_profile_iam_role.name
-# }
-
-# module "mediaconvert_frontend_instance" {
-#   source                      = "./modules/ec2"
-#   name                        = "mediaconvert-frontend-instance"
-#   ami_id                      = data.aws_ami.ubuntu.id
-#   instance_type               = "t2.micro"
-#   key_name                    = "madmaxkeypair"
-#   associate_public_ip_address = true
-#   user_data                   = filebase64("${path.module}/scripts/user_data.sh")
-#   instance_profile            = aws_iam_instance_profile.iam_instance_profile.name
-#   subnet_id                   = module.public_subnets.subnets[0].id
-#   security_groups             = [module.security_group.id]
-# }
 
 # Next.js application bucket
 module "mediaconvert_frontend_bucket" {
@@ -790,7 +652,9 @@ module "mediaconvert_frontend_cloudfront_distribution" {
   query_string                   = true
 }
 
+# -------------------------------------------------------------------------
 # API Gateway configuration
+# -------------------------------------------------------------------------
 resource "aws_api_gateway_rest_api" "mediaconvert_rest_api" {
   name = "mediaconvert-api-${var.env}"
   endpoint_configuration {
