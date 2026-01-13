@@ -16,6 +16,17 @@ module "mediaconvert_sns" {
   ]
 }
 
+module "alarm_notification" {
+  source     = "./modules/sns"
+  topic_name = "mediaconvert-alarm-notifications-${var.env}"
+  subscriptions = [
+    {
+      protocol = "email"
+      endpoint = var.notification_email
+    }
+  ]
+}
+
 # -------------------------------------------------------------------------
 # EventBridge Rule
 # -------------------------------------------------------------------------
@@ -299,9 +310,9 @@ module "mediaconvert_api_authorizer_function_code_bucket" {
 module "mediaconvert_iam_role" {
   source             = "./modules/iam"
   role_name          = "mediaconvert-iam-role-${var.env}"
-  role_description   = "mediaconvert-iam-role-${var.env}"
+  role_description   = "MediaConvert IAM Role"
   policy_name        = "mediaconvert-iam-policy-${var.env}"
-  policy_description = "mediaconvert-iam-policy-${var.env}"
+  policy_description = "MediaConvert IAM Role Policy"
   assume_role_policy = <<EOF
     {
       "Version": "2012-10-17",
@@ -339,9 +350,9 @@ module "mediaconvert_iam_role" {
 module "mediaconvert_function_iam_role" {
   source             = "./modules/iam"
   role_name          = "mediaconvert-function-iam-role-${var.env}"
-  role_description   = "mediaconvert-function-iam-role-${var.env}"
+  role_description   = "MediaConvert Function IAM Role"
   policy_name        = "mediaconvert-function-iam-policy-${var.env}"
-  policy_description = "mediaconvert-function-iam-policy-${var.env}"
+  policy_description = "MediaConvert Function IAM Role Policy"
   assume_role_policy = <<EOF
     {
         "Version": "2012-10-17",
@@ -570,7 +581,7 @@ module "vpc" {
   single_nat_gateway      = true
   one_nat_gateway_per_az  = false
   tags = {
-    Project     = "mediaconvert"
+    Project = "mediaconvert"
   }
 }
 
@@ -764,4 +775,490 @@ resource "aws_api_gateway_stage" "mediaconvert_api_stage" {
   deployment_id = aws_api_gateway_deployment.mediaconvert_api_deployment.id
   rest_api_id   = aws_api_gateway_rest_api.mediaconvert_rest_api.id
   stage_name    = var.env
+}
+
+# -------------------------------------------------------------------------
+# Monitoring & Alerting Configuration
+# -------------------------------------------------------------------------
+module "convert_function_errors" {
+  source              = "./modules/cloudwatch/cloudwatch-alarm"
+  alarm_name          = "mediaconvert-lambda-errors-${var.env}"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = "2"
+  metric_name         = "Errors"
+  namespace           = "AWS/Lambda"
+  period              = "300"
+  statistic           = "Sum"
+  threshold           = "5"
+  alarm_description   = "Alert when convert function has more than 5 errors in 10 minutes"
+  alarm_actions       = [module.alarm_notification.topic_arn]
+  ok_actions          = [module.alarm_notification.topic_arn]
+  treat_missing_data  = "notBreaching"
+
+  dimensions = {
+    FunctionName = module.mediaconvert_lambda_function.function_name
+  }
+
+  tags = {
+    Severity = "Critical"
+    Service  = "Lambda"
+  }
+}
+
+module "convert_function_throttles" {
+  source              = "./modules/cloudwatch/cloudwatch-alarm"
+  alarm_name          = "mediaconvert-lambda-throttles-${var.env}"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = "1"
+  metric_name         = "Throttles"
+  namespace           = "AWS/Lambda"
+  period              = "300"
+  statistic           = "Sum"
+  threshold           = "3"
+  alarm_description   = "Alert when convert function is throttled"
+  alarm_actions       = [module.alarm_notification.topic_arn]
+  treat_missing_data  = "notBreaching"
+
+  dimensions = {
+    FunctionName = module.mediaconvert_lambda_function.function_name
+  }
+
+  tags = {
+    Severity = "Warning"
+    Service  = "Lambda"
+  }
+}
+
+module "convert_function_duration" {
+  source              = "./modules/cloudwatch/cloudwatch-alarm"
+  alarm_name          = "mediaconvert-lambda-duration-${var.env}"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = "2"
+  metric_name         = "Duration"
+  namespace           = "AWS/Lambda"
+  period              = "300"
+  statistic           = "Average"
+  threshold           = "150000" # 150 seconds (adjust based on your timeout)
+  alarm_description   = "Alert when convert function duration is high"
+  alarm_actions       = [module.alarm_notification.topic_arn]
+  treat_missing_data  = "notBreaching"
+
+  dimensions = {
+    FunctionName = module.mediaconvert_lambda_function.function_name
+  }
+
+  tags = {
+    Severity = "Warning"
+    Service  = "Lambda"
+  }
+}
+
+module "convert_function_concurrent_executions" {
+  source              = "./modules/cloudwatch/cloudwatch-alarm"
+  alarm_name          = "mediaconvert-lambda-concurrent-executions-${var.env}"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = "1"
+  metric_name         = "ConcurrentExecutions"
+  namespace           = "AWS/Lambda"
+  period              = "300"
+  statistic           = "Maximum"
+  threshold           = "80" # 80% of your account limit
+  alarm_description   = "Alert when concurrent executions are high"
+  alarm_actions       = [module.alarm_notification.topic_arn]
+  treat_missing_data  = "notBreaching"
+
+  dimensions = {
+    FunctionName = module.mediaconvert_lambda_function.function_name
+  }
+
+  tags = {
+    Severity = "Warning"
+    Service  = "Lambda"
+  }
+}
+
+module "get_presigned_url_function_errors" {
+  source              = "./modules/cloudwatch/cloudwatch-alarm"
+  alarm_name          = "mediaconvert-get-presigned-url-errors-${var.env}"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = "2"
+  metric_name         = "Errors"
+  namespace           = "AWS/Lambda"
+  period              = "300"
+  statistic           = "Sum"
+  threshold           = "10"
+  alarm_description   = "Alert when get presigned URL function has errors"
+  alarm_actions       = [module.alarm_notification.topic_arn]
+  treat_missing_data  = "notBreaching"
+
+  dimensions = {
+    FunctionName = module.mediaconvert_get_presigned_url_function.function_name
+  }
+
+  tags = {
+    Severity = "Warning"
+    Service  = "Lambda"
+  }
+}
+
+module "get_records_function_errors" {
+  source              = "./modules/cloudwatch/cloudwatch-alarm"
+  alarm_name          = "mediaconvert-get-records-errors-${var.env}"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = "2"
+  metric_name         = "Errors"
+  namespace           = "AWS/Lambda"
+  period              = "300"
+  statistic           = "Sum"
+  threshold           = "10"
+  alarm_description   = "Alert when get records function has errors"
+  alarm_actions       = [module.alarm_notification.topic_arn]
+  treat_missing_data  = "notBreaching"
+
+  dimensions = {
+    FunctionName = module.mediaconvert_get_records_function.function_name
+  }
+
+  tags = {
+    Severity = "Warning"
+    Service  = "Lambda"
+  }
+}
+
+module "api_gateway_4xx_errors" {
+  source              = "./modules/cloudwatch/cloudwatch-alarm"
+  alarm_name          = "mediaconvert-api-4xx-errors-${var.env}"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = "2"
+  metric_name         = "4XXError"
+  namespace           = "AWS/ApiGateway"
+  period              = "300"
+  statistic           = "Sum"
+  threshold           = "50"
+  alarm_description   = "Alert when API Gateway has high 4XX errors"
+  alarm_actions       = [module.alarm_notification.topic_arn]
+  treat_missing_data  = "notBreaching"
+
+  dimensions = {
+    ApiName = aws_api_gateway_rest_api.mediaconvert_rest_api.name
+    Stage   = aws_api_gateway_stage.mediaconvert_api_stage.stage_name
+  }
+
+  tags = {
+    Severity = "Warning"
+    Service  = "API Gateway"
+  }
+}
+
+module "api_gateway_5xx_errors" {
+  source              = "./modules/cloudwatch/cloudwatch-alarm"
+  alarm_name          = "mediaconvert-api-5xx-errors-${var.env}"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = "1"
+  metric_name         = "5XXError"
+  namespace           = "AWS/ApiGateway"
+  period              = "300"
+  statistic           = "Sum"
+  threshold           = "10"
+  alarm_description   = "Alert when API Gateway has 5XX errors (critical)"
+  alarm_actions       = [module.alarm_notification.topic_arn]
+  ok_actions          = [module.alarm_notification.topic_arn]
+  treat_missing_data  = "notBreaching"
+
+  dimensions = {
+    ApiName = aws_api_gateway_rest_api.mediaconvert_rest_api.name
+    Stage   = aws_api_gateway_stage.mediaconvert_api_stage.stage_name
+  }
+
+  tags = {
+    Severity = "Critical"
+    Service  = "API Gateway"
+  }
+}
+
+module "api_gateway_latency" {
+  source              = "./modules/cloudwatch/cloudwatch-alarm"
+  alarm_name          = "mediaconvert-api-latency-${var.env}"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = "2"
+  metric_name         = "Latency"
+  namespace           = "AWS/ApiGateway"
+  period              = "300"
+  statistic           = "Average"
+  threshold           = "5000" # 5 seconds
+  alarm_description   = "Alert when API Gateway latency is high"
+  alarm_actions       = [module.alarm_notification.topic_arn]
+  treat_missing_data  = "notBreaching"
+
+  dimensions = {
+    ApiName = aws_api_gateway_rest_api.mediaconvert_rest_api.name
+    Stage   = aws_api_gateway_stage.mediaconvert_api_stage.stage_name
+  }
+
+  tags = {
+    Severity = "Warning"
+    Service  = "API Gateway"
+  }
+}
+
+module "sqs_dlq_messages" {
+  source              = "./modules/cloudwatch/cloudwatch-alarm"
+  alarm_name          = "mediaconvert-dlq-messages-${var.env}"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = "1"
+  metric_name         = "ApproximateNumberOfMessagesVisible"
+  namespace           = "AWS/SQS"
+  period              = "300"
+  statistic           = "Average"
+  threshold           = "1"
+  alarm_description   = "Alert when messages appear in DLQ"
+  alarm_actions       = [module.alarm_notification.topic_arn]
+  ok_actions          = [module.alarm_notification.topic_arn]
+  treat_missing_data  = "notBreaching"
+
+  dimensions = {
+    QueueName = module.mediaconvert_sqs.dlq_name
+  }
+
+  tags = {
+    Severity = "Critical"
+    Service  = "SQS"
+  }
+}
+
+module "sqs_oldest_message_age" {
+  source              = "./modules/cloudwatch/cloudwatch-alarm"
+  alarm_name          = "mediaconvert-sqs-old-messages-${var.env}"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = "2"
+  metric_name         = "ApproximateAgeOfOldestMessage"
+  namespace           = "AWS/SQS"
+  period              = "300"
+  statistic           = "Maximum"
+  threshold           = "1800" # 30 minutes
+  alarm_description   = "Alert when messages are stuck in queue for too long"
+  alarm_actions       = [module.alarm_notification.topic_arn]
+  treat_missing_data  = "notBreaching"
+
+  dimensions = {
+    QueueName = module.mediaconvert_sqs.queue_name
+  }
+
+  tags = {
+    Severity = "Warning"
+    Service  = "SQS"
+  }
+}
+
+module "sqs_queue_depth" {
+  source              = "./modules/cloudwatch/cloudwatch-alarm"
+  alarm_name          = "mediaconvert-sqs-queue-depth-${var.env}"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = "2"
+  metric_name         = "ApproximateNumberOfMessagesVisible"
+  namespace           = "AWS/SQS"
+  period              = "300"
+  statistic           = "Average"
+  threshold           = "100"
+  alarm_description   = "Alert when queue has too many messages"
+  alarm_actions       = [module.alarm_notification.topic_arn]
+  treat_missing_data  = "notBreaching"
+
+  dimensions = {
+    QueueName = module.mediaconvert_sqs.queue_name
+  }
+
+  tags = {
+    Severity = "Warning"
+    Service  = "SQS"
+  }
+}
+
+module "dynamodb_read_throttles" {
+  source              = "./modules/cloudwatch/cloudwatch-alarm"
+  alarm_name          = "mediaconvert-dynamodb-read-throttles-${var.env}"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = "2"
+  metric_name         = "ReadThrottleEvents"
+  namespace           = "AWS/DynamoDB"
+  period              = "300"
+  statistic           = "Sum"
+  threshold           = "5"
+  alarm_description   = "Alert when DynamoDB reads are throttled"
+  alarm_actions       = [module.alarm_notification.topic_arn]
+  treat_missing_data  = "notBreaching"
+
+  dimensions = {
+    TableName = module.mediaconvert_dynamodb.name
+  }
+
+  tags = {
+    Severity = "Warning"
+    Service  = "DynamoDB"
+  }
+}
+
+module "dynamodb_write_throttles" {
+  source              = "./modules/cloudwatch/cloudwatch-alarm"
+  alarm_name          = "mediaconvert-dynamodb-write-throttles-${var.env}"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = "2"
+  metric_name         = "WriteThrottleEvents"
+  namespace           = "AWS/DynamoDB"
+  period              = "300"
+  statistic           = "Sum"
+  threshold           = "5"
+  alarm_description   = "Alert when DynamoDB writes are throttled"
+  alarm_actions       = [module.alarm_notification.topic_arn]
+  treat_missing_data  = "notBreaching"
+
+  dimensions = {
+    TableName = module.mediaconvert_dynamodb.name
+  }
+
+  tags = {
+    Severity = "Critical"
+    Service  = "DynamoDB"
+  }
+}
+
+module "dynamodb_system_errors" {
+  source              = "./modules/cloudwatch/cloudwatch-alarm"
+  alarm_name          = "mediaconvert-dynamodb-system-errors-${var.env}"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = "1"
+  metric_name         = "SystemErrors"
+  namespace           = "AWS/DynamoDB"
+  period              = "300"
+  statistic           = "Sum"
+  threshold           = "5"
+  alarm_description   = "Alert when DynamoDB has system errors"
+  alarm_actions       = [module.alarm_notification.topic_arn]
+  ok_actions          = [module.alarm_notification.topic_arn]
+  treat_missing_data  = "notBreaching"
+
+  dimensions = {
+    TableName = module.mediaconvert_dynamodb.name
+  }
+
+  tags = {
+    Severity = "Critical"
+    Service  = "DynamoDB"
+  }
+}
+
+module "dynamodb_consumed_read_capacity" {
+  source              = "./modules/cloudwatch/cloudwatch-alarm"
+  alarm_name          = "mediaconvert-dynamodb-high-read-capacity-${var.env}"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = "2"
+  metric_name         = "ConsumedReadCapacityUnits"
+  namespace           = "AWS/DynamoDB"
+  period              = "300"
+  statistic           = "Average"
+  threshold           = "16" # 80% of provisioned 20 units
+  alarm_description   = "Alert when DynamoDB read capacity is high"
+  alarm_actions       = [module.alarm_notification.topic_arn]
+  treat_missing_data  = "notBreaching"
+
+  dimensions = {
+    TableName = module.mediaconvert_dynamodb.name
+  }
+
+  tags = {
+    Severity = "Warning"
+    Service  = "DynamoDB"
+  }
+}
+
+module "dynamodb_consumed_write_capacity" {
+  source              = "./modules/cloudwatch/cloudwatch-alarm"
+  alarm_name          = "mediaconvert-dynamodb-high-write-capacity-${var.env}"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = "2"
+  metric_name         = "ConsumedWriteCapacityUnits"
+  namespace           = "AWS/DynamoDB"
+  period              = "300"
+  statistic           = "Average"
+  threshold           = "16" # 80% of provisioned 20 units
+  alarm_description   = "Alert when DynamoDB write capacity is high"
+  alarm_actions       = [module.alarm_notification.topic_arn]
+  treat_missing_data  = "notBreaching"
+
+  dimensions = {
+    TableName = module.mediaconvert_dynamodb.name
+  }
+
+  tags = {
+    Severity = "Warning"
+    Service  = "DynamoDB"
+  }
+}
+
+module "cloudfront_5xx_error_rate" {
+  source              = "./modules/cloudwatch/cloudwatch-alarm"
+  alarm_name          = "mediaconvert-cloudfront-5xx-errors-${var.env}"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = "2"
+  metric_name         = "5xxErrorRate"
+  namespace           = "AWS/CloudFront"
+  period              = "300"
+  statistic           = "Average"
+  threshold           = "5" # 5% error rate
+  alarm_description   = "Alert when CloudFront has high 5XX error rate"
+  alarm_actions       = [module.alarm_notification.topic_arn]
+  treat_missing_data  = "notBreaching"
+
+  dimensions = {
+    DistributionId = module.mediaconvert_cloudfront_distribution.distribution_id
+  }
+
+  tags = {
+    Severity = "Critical"
+    Service  = "CloudFront"
+  }
+}
+
+module "cloudfront_origin_latency" {
+  source              = "./modules/cloudwatch/cloudwatch-alarm"
+  alarm_name          = "mediaconvert-cloudfront-origin-latency-${var.env}"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = "2"
+  metric_name         = "OriginLatency"
+  namespace           = "AWS/CloudFront"
+  period              = "300"
+  statistic           = "Average"
+  threshold           = "5000" # 5 seconds
+  alarm_description   = "Alert when CloudFront origin latency is high"
+  alarm_actions       = [module.alarm_notification.topic_arn]
+  treat_missing_data  = "notBreaching"
+
+  dimensions = {
+    DistributionId = module.mediaconvert_cloudfront_distribution.distribution_id
+  }
+
+  tags = {
+    Severity = "Warning"
+    Service  = "CloudFront"
+  }
+}
+
+module "mediaconvert_job_failures" {
+  source              = "./modules/cloudwatch/cloudwatch-alarm"
+  alarm_name          = "mediaconvert-job-failures-${var.env}"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = "1"
+  metric_name         = "JobFailures"
+  namespace           = "MediaConvert"
+  period              = "300"
+  statistic           = "Sum"
+  threshold           = "3"
+  alarm_description   = "Alert when MediaConvert jobs fail"
+  alarm_actions       = [module.alarm_notification.topic_arn]
+  treat_missing_data  = "notBreaching"
+
+  tags = {
+    Severity = "Critical"
+    Service  = "MediaConvert"
+  }
 }
