@@ -18,3 +18,8 @@ variable "permissions" {
   }))
   default = []
 }
+variable "dead_letter_config" {
+  type = object({
+    target_arn = string
+  })
+}

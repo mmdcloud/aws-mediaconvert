@@ -74,17 +74,15 @@ module "mediaconvert_dynamodb" {
 # -------------------------------------------------------------------------
 # SQS configuration
 # -------------------------------------------------------------------------
-module "mediaconvert_sqs" {
-  source                        = "./modules/sqs"
-  queue_name                    = "mediaconvert-process-queue-${var.env}"
-  delay_seconds                 = 0
-  maxReceiveCount               = 3
-  dlq_message_retention_seconds = 86400
-  dlq_name                      = "mediaconvert-process-dlq-${var.env}"
-  max_message_size              = 262144
-  message_retention_seconds     = 345600
-  visibility_timeout_seconds    = 180
-  receive_wait_time_seconds     = 20
+module "mediaconvert_process_sqs" {
+  source                     = "./modules/sqs"
+  queue_name                 = "mediaconvert-process-queue-${var.env}"
+  delay_seconds              = 0
+  maxReceiveCount            = 3
+  max_message_size           = 262144
+  message_retention_seconds  = 345600
+  visibility_timeout_seconds = 180
+  receive_wait_time_seconds  = 20
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
@@ -101,6 +99,18 @@ module "mediaconvert_sqs" {
       }
     ]
   })
+}
+
+module "mediaconvert_process_dlq" {
+  source                     = "./modules/sqs"
+  queue_name                 = "mediaconvert-process-dlq-${var.env}"
+  delay_seconds              = 0
+  maxReceiveCount            = 3
+  max_message_size           = 262144
+  message_retention_seconds  = 345600
+  visibility_timeout_seconds = 180
+  receive_wait_time_seconds  = 20
+  policy                     = ""
 }
 
 # -------------------------------------------------------------------------
@@ -143,7 +153,7 @@ module "cognito" {
 
 #  Lambda SQS event source mapping
 resource "aws_lambda_event_source_mapping" "sqs_event_trigger" {
-  event_source_arn                   = module.mediaconvert_sqs.arn
+  event_source_arn                   = module.mediaconvert_process_sqs.arn
   function_name                      = module.mediaconvert_lambda_function.arn
   enabled                            = true
   batch_size                         = 10
@@ -162,7 +172,7 @@ module "mediaconvert_source_bucket" {
   bucket_notification = {
     queue = [
       {
-        queue_arn = module.mediaconvert_sqs.arn
+        queue_arn = module.mediaconvert_process_sqs.arn
         events    = ["s3:ObjectCreated:*"]
       }
     ]
@@ -419,7 +429,7 @@ module "mediaconvert_function_iam_role" {
                 "sqs:GetQueueAttributes"
               ],
               "Effect"   : "Allow",
-              "Resource" : "${module.mediaconvert_sqs.arn}"
+              "Resource" : "${module.mediaconvert_process_sqs.arn}"
           },
           {
             "Action": [
@@ -438,7 +448,7 @@ module "mediaconvert_function_iam_role" {
 # Lambda Configuration
 # -------------------------------------------------------------------------
 module "mediaconvert_lambda_function" {
-  source        = "./modules/lambda"
+  source        = "../../modules/lambda"
   function_name = "mediaconvert-lambda-function-${var.env}"
   role_arn      = module.mediaconvert_function_iam_role.arn
   env_variables = {
@@ -446,6 +456,9 @@ module "mediaconvert_lambda_function" {
     DestinationBucket = "${module.mediaconvert_destination_bucket.bucket}"
     MediaConvertRole  = "${module.mediaconvert_iam_role.arn}"
     TABLE_NAME        = "${module.mediaconvert_dynamodb.name}"
+  }
+  dead_letter_config = {
+    target_arn = module.mediaconvert_process_dlq.arn
   }
   handler    = "convert_function.lambda_handler"
   runtime    = "python3.12"
@@ -456,13 +469,14 @@ module "mediaconvert_lambda_function" {
 
 # Lambda function to get presigned url
 module "mediaconvert_get_presigned_url_function" {
-  source        = "./modules/lambda"
+  source        = "../../modules/lambda"
   function_name = "mediaconvert-get-presigned-url-function-${var.env}"
   role_arn      = module.mediaconvert_function_iam_role.arn
   env_variables = {
     REGION     = var.region
     SRC_BUCKET = "${module.mediaconvert_source_bucket.bucket}"
   }
+  dead_letter_config = {}
   permissions = [
     {
       statement_id = "InvokeGetPresignedUrl"
@@ -480,13 +494,14 @@ module "mediaconvert_get_presigned_url_function" {
 
 # Lambda function to get processed records from DynamoDB
 module "mediaconvert_get_records_function" {
-  source        = "./modules/lambda"
+  source        = "../../modules/lambda"
   function_name = "mediaconvert-get-records-function-${var.env}"
   role_arn      = module.mediaconvert_function_iam_role.arn
   env_variables = {
     REGION     = var.region
     TABLE_NAME = "${module.mediaconvert_dynamodb.name}"
   }
+  dead_letter_config = {}
   permissions = [
     {
       statement_id = "InvokeGetRecords"
@@ -504,7 +519,7 @@ module "mediaconvert_get_records_function" {
 
 # Lambda authorizer function for API Gateway
 module "mediaconvert_api_authorizer_function" {
-  source        = "./modules/lambda"
+  source        = "../../modules/lambda"
   function_name = "mediaconvert-api-authorizer-function-${var.env}"
   role_arn      = module.mediaconvert_function_iam_role.arn
   env_variables = {
@@ -512,6 +527,7 @@ module "mediaconvert_api_authorizer_function" {
     APP_CLIENT_ID = module.cognito.client_ids[0]
     REGION        = var.region
   }
+  dead_letter_config = {}
   permissions = [
     {
       statement_id = "AllowAPIGatewayInvoke"
@@ -1017,7 +1033,7 @@ module "sqs_dlq_messages" {
   treat_missing_data  = "notBreaching"
 
   dimensions = {
-    QueueName = module.mediaconvert_sqs.dlq_name
+    QueueName = module.mediaconvert_process_sqs.dlq_name
   }
 
   tags = {
@@ -1041,7 +1057,7 @@ module "sqs_oldest_message_age" {
   treat_missing_data  = "notBreaching"
 
   dimensions = {
-    QueueName = module.mediaconvert_sqs.queue_name
+    QueueName = module.mediaconvert_process_sqs.queue_name
   }
 
   tags = {
@@ -1065,7 +1081,7 @@ module "sqs_queue_depth" {
   treat_missing_data  = "notBreaching"
 
   dimensions = {
-    QueueName = module.mediaconvert_sqs.queue_name
+    QueueName = module.mediaconvert_process_sqs.queue_name
   }
 
   tags = {

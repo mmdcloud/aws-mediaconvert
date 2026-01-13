@@ -6,6 +6,12 @@ resource "aws_lambda_function" "function" {
   runtime       = var.runtime
   s3_bucket     = var.s3_bucket
   s3_key        = var.s3_key
+  dynamic "dead_letter_config" {
+    for_each = var.dead_letter_config != null ? [1] : [0]
+    content {
+      target_arn = dead_letter_config.value.target_arn
+    }
+  }
   environment {
     variables = var.env_variables
   }
