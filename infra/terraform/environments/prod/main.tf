@@ -296,7 +296,6 @@ module "mediaconvert_api_authorizer_function_code_bucket" {
 # -------------------------------------------------------------------------
 # IAM Configuration
 # -------------------------------------------------------------------------
-# MediaConvert IAM Role
 module "mediaconvert_iam_role" {
   source             = "./modules/iam"
   role_name          = "mediaconvert-iam-role-${var.env}"
@@ -427,7 +426,6 @@ module "mediaconvert_function_iam_role" {
 # -------------------------------------------------------------------------
 # Lambda Configuration
 # -------------------------------------------------------------------------
-# Lambda function to process media files
 module "mediaconvert_lambda_function" {
   source        = "./modules/lambda"
   function_name = "mediaconvert-lambda-function-${var.env}"
@@ -558,22 +556,21 @@ module "mediaconvert_cloudfront_distribution" {
 # VPC Configuration
 # -------------------------------------------------------------------------
 module "vpc" {
-  source = "./modules/vpc"
-  vpc_name = "vpc-${var.env}-${var.region}"
-  vpc_cidr = "10.0.0.0/16"
-  azs             = var.azs
-  public_subnets  = var.public_subnets
-  private_subnets = var.private_subnets
-  enable_dns_hostnames = true
-  enable_dns_support   = true
-  create_igw = true
+  source                  = "./modules/vpc"
+  vpc_name                = "vpc-${var.env}-${var.region}"
+  vpc_cidr                = "10.0.0.0/16"
+  azs                     = var.azs
+  public_subnets          = var.public_subnets
+  private_subnets         = var.private_subnets
+  enable_dns_hostnames    = true
+  enable_dns_support      = true
+  create_igw              = true
   map_public_ip_on_launch = true
-  enable_nat_gateway     = true
-  single_nat_gateway     = false
-  one_nat_gateway_per_az = true
+  enable_nat_gateway      = true
+  single_nat_gateway      = true
+  one_nat_gateway_per_az  = false
   tags = {
-    Environment = "${var.env}"
-    Project     = "carshub"
+    Project     = "mediaconvert"
   }
 }
 
@@ -766,5 +763,5 @@ resource "aws_api_gateway_deployment" "mediaconvert_api_deployment" {
 resource "aws_api_gateway_stage" "mediaconvert_api_stage" {
   deployment_id = aws_api_gateway_deployment.mediaconvert_api_deployment.id
   rest_api_id   = aws_api_gateway_rest_api.mediaconvert_rest_api.id
-  stage_name    = "${var.env}"
+  stage_name    = var.env
 }
