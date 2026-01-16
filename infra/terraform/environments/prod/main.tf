@@ -1,12 +1,38 @@
+# -------------------------------------------------------------------------
+# Random Provider Configuration
+# -------------------------------------------------------------------------
 resource "random_id" "random" {
   byte_length = 8
+}
+
+
+# -------------------------------------------------------------------------
+# VPC Configuration
+# -------------------------------------------------------------------------
+module "vpc" {
+  source                  = "../../modules/vpc"
+  vpc_name                = "vpc-${var.env}-${var.region}"
+  vpc_cidr                = "10.0.0.0/16"
+  azs                     = var.azs
+  public_subnets          = var.public_subnets
+  private_subnets         = var.private_subnets
+  enable_dns_hostnames    = true
+  enable_dns_support      = true
+  create_igw              = true
+  map_public_ip_on_launch = true
+  enable_nat_gateway      = true
+  single_nat_gateway      = true
+  one_nat_gateway_per_az  = false
+  tags = {
+    Project = "mediaconvert"
+  }
 }
 
 # -------------------------------------------------------------------------
 # SNS Configuration
 # -------------------------------------------------------------------------
 module "mediaconvert_sns" {
-  source     = "./modules/sns"
+  source     = "../../modules/sns"
   topic_name = "mediaconvert-job-status-change-topic-${var.env}"
   subscriptions = [
     {
@@ -17,7 +43,7 @@ module "mediaconvert_sns" {
 }
 
 module "alarm_notification" {
-  source     = "./modules/sns"
+  source     = "../../modules/sns"
   topic_name = "mediaconvert-alarm-notifications-${var.env}"
   subscriptions = [
     {
@@ -31,7 +57,7 @@ module "alarm_notification" {
 # EventBridge Rule
 # -------------------------------------------------------------------------
 module "mediaconvert_eventbridge_rule" {
-  source           = "./modules/eventbridge"
+  source           = "../../modules/eventbridge"
   rule_name        = "mediaconvert-job-state-change-rule-${var.env}"
   rule_description = "It monitors the media convert job state change event"
   event_pattern = jsonencode({
@@ -50,7 +76,7 @@ module "mediaconvert_eventbridge_rule" {
 # DynamoDB Table
 # -------------------------------------------------------------------------
 module "mediaconvert_dynamodb" {
-  source = "./modules/dynamodb"
+  source = "../../modules/dynamodb"
   name   = "mediaconvert-records-${var.env}"
   attributes = [
     {
@@ -75,7 +101,7 @@ module "mediaconvert_dynamodb" {
 # SQS configuration
 # -------------------------------------------------------------------------
 module "mediaconvert_process_sqs" {
-  source                     = "./modules/sqs"
+  source                     = "../../modules/sqs"
   queue_name                 = "mediaconvert-process-queue-${var.env}"
   delay_seconds              = 0
   maxReceiveCount            = 3
@@ -102,7 +128,7 @@ module "mediaconvert_process_sqs" {
 }
 
 module "mediaconvert_process_dlq" {
-  source                     = "./modules/sqs"
+  source                     = "../../modules/sqs"
   queue_name                 = "mediaconvert-process-dlq-${var.env}"
   delay_seconds              = 0
   maxReceiveCount            = 3
@@ -117,7 +143,7 @@ module "mediaconvert_process_dlq" {
 # Cognito configuration
 # -------------------------------------------------------------------------
 module "cognito" {
-  source                     = "./modules/cognito"
+  source                     = "../../modules/cognito"
   name                       = "mediaconvert-users-${var.env}"
   username_attributes        = ["email"]
   auto_verified_attributes   = ["email"]
@@ -165,7 +191,7 @@ resource "aws_lambda_event_source_mapping" "sqs_event_trigger" {
 # -------------------------------------------------------------------------
 # MediaConvert Source Bucket
 module "mediaconvert_source_bucket" {
-  source             = "./modules/s3"
+  source             = "../../modules/s3"
   bucket_name        = "mediaconvert-src-${var.env}"
   objects            = []
   versioning_enabled = "Enabled"
@@ -191,7 +217,7 @@ module "mediaconvert_source_bucket" {
 
 # MediaConvert Destination Bucket
 module "mediaconvert_destination_bucket" {
-  source             = "./modules/s3"
+  source             = "../../modules/s3"
   bucket_name        = "mediaconvert-dest-${var.env}"
   objects            = []
   versioning_enabled = "Enabled"
@@ -228,7 +254,7 @@ module "mediaconvert_destination_bucket" {
 
 # MediaConvert Function Code Bucket
 module "mediaconvert_function_code_bucket" {
-  source      = "./modules/s3"
+  source      = "../../modules/s3"
   bucket_name = "mediaconvert-function-code-${var.env}"
   objects = [
     {
@@ -250,7 +276,7 @@ module "mediaconvert_function_code_bucket" {
 
 # MediaConvert Get Pre Signed Url Function Code Bucket
 module "mediaconvert_get_presigned_url_function_code_bucket" {
-  source      = "./modules/s3"
+  source      = "../../modules/s3"
   bucket_name = "mediaconvert-get-presigned-url-function-code-${var.env}"
   objects = [
     {
@@ -272,7 +298,7 @@ module "mediaconvert_get_presigned_url_function_code_bucket" {
 
 # MediaConvert Get Records Function Code Bucket
 module "mediaconvert_get_records_function_code_bucket" {
-  source      = "./modules/s3"
+  source      = "../../modules/s3"
   bucket_name = "mediaconvert-getrecords-code-${var.env}"
   objects = [
     {
@@ -294,7 +320,7 @@ module "mediaconvert_get_records_function_code_bucket" {
 
 # MediaConvert API Authorizer Function Code Bucket
 module "mediaconvert_api_authorizer_function_code_bucket" {
-  source      = "./modules/s3"
+  source      = "../../modules/s3"
   bucket_name = "mediaconvert-apiauthorizer-code-${var.env}"
   objects = [
     {
@@ -318,7 +344,7 @@ module "mediaconvert_api_authorizer_function_code_bucket" {
 # IAM Configuration
 # -------------------------------------------------------------------------
 module "mediaconvert_iam_role" {
-  source             = "./modules/iam"
+  source             = "../../modules/iam"
   role_name          = "mediaconvert-iam-role-${var.env}"
   role_description   = "MediaConvert IAM Role"
   policy_name        = "mediaconvert-iam-policy-${var.env}"
@@ -358,7 +384,7 @@ module "mediaconvert_iam_role" {
 
 # Lambda function IAM Role
 module "mediaconvert_function_iam_role" {
-  source             = "./modules/iam"
+  source             = "../../modules/iam"
   role_name          = "mediaconvert-function-iam-role-${var.env}"
   role_description   = "MediaConvert Function IAM Role"
   policy_name        = "mediaconvert-function-iam-policy-${var.env}"
@@ -438,6 +464,22 @@ module "mediaconvert_function_iam_role" {
               ],
               "Effect"   : "Allow",
               "Resource" : "${module.cognito.user_pool_arn}"
+          },
+          {
+            "Action": [
+              "sqs:*"
+            ],
+            "Effect"   : "Allow",
+            "Resource" : "${module.mediaconvert_process_dlq.arn}"
+          },
+          {
+            "Action": [
+              "ec2:CreateNetworkInterface",
+              "ec2:DescribeNetworkInterfaces",
+              "ec2:DeleteNetworkInterface"
+            ],
+            "Effect"   : "Allow",
+            "Resource" : "*"
           }
       ]
     }
@@ -476,7 +518,6 @@ module "mediaconvert_get_presigned_url_function" {
     REGION     = var.region
     SRC_BUCKET = "${module.mediaconvert_source_bucket.bucket}"
   }
-  dead_letter_config = {}
   permissions = [
     {
       statement_id = "InvokeGetPresignedUrl"
@@ -501,7 +542,6 @@ module "mediaconvert_get_records_function" {
     REGION     = var.region
     TABLE_NAME = "${module.mediaconvert_dynamodb.name}"
   }
-  dead_letter_config = {}
   permissions = [
     {
       statement_id = "InvokeGetRecords"
@@ -527,7 +567,6 @@ module "mediaconvert_api_authorizer_function" {
     APP_CLIENT_ID = module.cognito.client_ids[0]
     REGION        = var.region
   }
-  dead_letter_config = {}
   permissions = [
     {
       statement_id = "AllowAPIGatewayInvoke"
@@ -547,7 +586,7 @@ module "mediaconvert_api_authorizer_function" {
 # Cloudfront distribution
 # -------------------------------------------------------------------------
 module "mediaconvert_cloudfront_distribution" {
-  source                                = "./modules/cloudfront"
+  source                                = "../../modules/cloudfront"
   distribution_name                     = "mediaconvert_cdn-${var.env}"
   oac_name                              = "mediaconvert_cdn_oac-${var.env}"
   oac_description                       = "mediaconvert_cdn_oac-${var.env}"
@@ -579,31 +618,9 @@ module "mediaconvert_cloudfront_distribution" {
   query_string                   = true
 }
 
-# -------------------------------------------------------------------------
-# VPC Configuration
-# -------------------------------------------------------------------------
-module "vpc" {
-  source                  = "./modules/vpc"
-  vpc_name                = "vpc-${var.env}-${var.region}"
-  vpc_cidr                = "10.0.0.0/16"
-  azs                     = var.azs
-  public_subnets          = var.public_subnets
-  private_subnets         = var.private_subnets
-  enable_dns_hostnames    = true
-  enable_dns_support      = true
-  create_igw              = true
-  map_public_ip_on_launch = true
-  enable_nat_gateway      = true
-  single_nat_gateway      = true
-  one_nat_gateway_per_az  = false
-  tags = {
-    Project = "mediaconvert"
-  }
-}
-
 # Next.js application bucket
 module "mediaconvert_frontend_bucket" {
-  source             = "./modules/s3"
+  source             = "../../modules/s3"
   bucket_name        = "mediaconvert-frontend-${var.env}"
   objects            = []
   versioning_enabled = "Enabled"
@@ -644,7 +661,7 @@ module "mediaconvert_frontend_bucket" {
 
 # MediaConvert Cloudfront distribution
 module "mediaconvert_frontend_cloudfront_distribution" {
-  source                                = "./modules/cloudfront"
+  source                                = "../../modules/cloudfront"
   distribution_name                     = "mediaconvert_cdn_frontend-${var.env}"
   oac_name                              = "mediaconvert_cdn_frontend_oac-${var.env}"
   oac_description                       = "mediaconvert_cdn_frontend_oac-${var.env}"
@@ -797,7 +814,7 @@ resource "aws_api_gateway_stage" "mediaconvert_api_stage" {
 # Monitoring & Alerting Configuration
 # -------------------------------------------------------------------------
 module "convert_function_errors" {
-  source              = "./modules/cloudwatch/cloudwatch-alarm"
+  source              = "../../modules/cloudwatch/cloudwatch-alarm"
   alarm_name          = "mediaconvert-lambda-errors-${var.env}"
   comparison_operator = "GreaterThanThreshold"
   evaluation_periods  = "2"
@@ -822,7 +839,7 @@ module "convert_function_errors" {
 }
 
 module "convert_function_throttles" {
-  source              = "./modules/cloudwatch/cloudwatch-alarm"
+  source              = "../../modules/cloudwatch/cloudwatch-alarm"
   alarm_name          = "mediaconvert-lambda-throttles-${var.env}"
   comparison_operator = "GreaterThanThreshold"
   evaluation_periods  = "1"
@@ -833,6 +850,7 @@ module "convert_function_throttles" {
   threshold           = "3"
   alarm_description   = "Alert when convert function is throttled"
   alarm_actions       = [module.alarm_notification.topic_arn]
+  ok_actions          = [module.alarm_notification.topic_arn]
   treat_missing_data  = "notBreaching"
 
   dimensions = {
@@ -846,7 +864,7 @@ module "convert_function_throttles" {
 }
 
 module "convert_function_duration" {
-  source              = "./modules/cloudwatch/cloudwatch-alarm"
+  source              = "../../modules/cloudwatch/cloudwatch-alarm"
   alarm_name          = "mediaconvert-lambda-duration-${var.env}"
   comparison_operator = "GreaterThanThreshold"
   evaluation_periods  = "2"
@@ -857,6 +875,7 @@ module "convert_function_duration" {
   threshold           = "150000" # 150 seconds (adjust based on your timeout)
   alarm_description   = "Alert when convert function duration is high"
   alarm_actions       = [module.alarm_notification.topic_arn]
+  ok_actions          = [module.alarm_notification.topic_arn]
   treat_missing_data  = "notBreaching"
 
   dimensions = {
@@ -870,7 +889,7 @@ module "convert_function_duration" {
 }
 
 module "convert_function_concurrent_executions" {
-  source              = "./modules/cloudwatch/cloudwatch-alarm"
+  source              = "../../modules/cloudwatch/cloudwatch-alarm"
   alarm_name          = "mediaconvert-lambda-concurrent-executions-${var.env}"
   comparison_operator = "GreaterThanThreshold"
   evaluation_periods  = "1"
@@ -881,6 +900,7 @@ module "convert_function_concurrent_executions" {
   threshold           = "80" # 80% of your account limit
   alarm_description   = "Alert when concurrent executions are high"
   alarm_actions       = [module.alarm_notification.topic_arn]
+  ok_actions          = [module.alarm_notification.topic_arn]
   treat_missing_data  = "notBreaching"
 
   dimensions = {
@@ -894,7 +914,7 @@ module "convert_function_concurrent_executions" {
 }
 
 module "get_presigned_url_function_errors" {
-  source              = "./modules/cloudwatch/cloudwatch-alarm"
+  source              = "../../modules/cloudwatch/cloudwatch-alarm"
   alarm_name          = "mediaconvert-get-presigned-url-errors-${var.env}"
   comparison_operator = "GreaterThanThreshold"
   evaluation_periods  = "2"
@@ -905,6 +925,7 @@ module "get_presigned_url_function_errors" {
   threshold           = "10"
   alarm_description   = "Alert when get presigned URL function has errors"
   alarm_actions       = [module.alarm_notification.topic_arn]
+  ok_actions          = [module.alarm_notification.topic_arn]
   treat_missing_data  = "notBreaching"
 
   dimensions = {
@@ -918,7 +939,7 @@ module "get_presigned_url_function_errors" {
 }
 
 module "get_records_function_errors" {
-  source              = "./modules/cloudwatch/cloudwatch-alarm"
+  source              = "../../modules/cloudwatch/cloudwatch-alarm"
   alarm_name          = "mediaconvert-get-records-errors-${var.env}"
   comparison_operator = "GreaterThanThreshold"
   evaluation_periods  = "2"
@@ -929,6 +950,7 @@ module "get_records_function_errors" {
   threshold           = "10"
   alarm_description   = "Alert when get records function has errors"
   alarm_actions       = [module.alarm_notification.topic_arn]
+  ok_actions          = [module.alarm_notification.topic_arn]
   treat_missing_data  = "notBreaching"
 
   dimensions = {
@@ -942,7 +964,7 @@ module "get_records_function_errors" {
 }
 
 module "api_gateway_4xx_errors" {
-  source              = "./modules/cloudwatch/cloudwatch-alarm"
+  source              = "../../modules/cloudwatch/cloudwatch-alarm"
   alarm_name          = "mediaconvert-api-4xx-errors-${var.env}"
   comparison_operator = "GreaterThanThreshold"
   evaluation_periods  = "2"
@@ -953,6 +975,7 @@ module "api_gateway_4xx_errors" {
   threshold           = "50"
   alarm_description   = "Alert when API Gateway has high 4XX errors"
   alarm_actions       = [module.alarm_notification.topic_arn]
+  ok_actions          = [module.alarm_notification.topic_arn]
   treat_missing_data  = "notBreaching"
 
   dimensions = {
@@ -967,7 +990,7 @@ module "api_gateway_4xx_errors" {
 }
 
 module "api_gateway_5xx_errors" {
-  source              = "./modules/cloudwatch/cloudwatch-alarm"
+  source              = "../../modules/cloudwatch/cloudwatch-alarm"
   alarm_name          = "mediaconvert-api-5xx-errors-${var.env}"
   comparison_operator = "GreaterThanThreshold"
   evaluation_periods  = "1"
@@ -993,7 +1016,7 @@ module "api_gateway_5xx_errors" {
 }
 
 module "api_gateway_latency" {
-  source              = "./modules/cloudwatch/cloudwatch-alarm"
+  source              = "../../modules/cloudwatch/cloudwatch-alarm"
   alarm_name          = "mediaconvert-api-latency-${var.env}"
   comparison_operator = "GreaterThanThreshold"
   evaluation_periods  = "2"
@@ -1004,6 +1027,7 @@ module "api_gateway_latency" {
   threshold           = "5000" # 5 seconds
   alarm_description   = "Alert when API Gateway latency is high"
   alarm_actions       = [module.alarm_notification.topic_arn]
+  ok_actions          = [module.alarm_notification.topic_arn]
   treat_missing_data  = "notBreaching"
 
   dimensions = {
@@ -1018,7 +1042,7 @@ module "api_gateway_latency" {
 }
 
 module "sqs_dlq_messages" {
-  source              = "./modules/cloudwatch/cloudwatch-alarm"
+  source              = "../../modules/cloudwatch/cloudwatch-alarm"
   alarm_name          = "mediaconvert-dlq-messages-${var.env}"
   comparison_operator = "GreaterThanThreshold"
   evaluation_periods  = "1"
@@ -1033,7 +1057,7 @@ module "sqs_dlq_messages" {
   treat_missing_data  = "notBreaching"
 
   dimensions = {
-    QueueName = module.mediaconvert_process_sqs.dlq_name
+    QueueName = module.mediaconvert_process_dlq.queue_name
   }
 
   tags = {
@@ -1043,7 +1067,7 @@ module "sqs_dlq_messages" {
 }
 
 module "sqs_oldest_message_age" {
-  source              = "./modules/cloudwatch/cloudwatch-alarm"
+  source              = "../../modules/cloudwatch/cloudwatch-alarm"
   alarm_name          = "mediaconvert-sqs-old-messages-${var.env}"
   comparison_operator = "GreaterThanThreshold"
   evaluation_periods  = "2"
@@ -1054,6 +1078,7 @@ module "sqs_oldest_message_age" {
   threshold           = "1800" # 30 minutes
   alarm_description   = "Alert when messages are stuck in queue for too long"
   alarm_actions       = [module.alarm_notification.topic_arn]
+  ok_actions          = [module.alarm_notification.topic_arn]
   treat_missing_data  = "notBreaching"
 
   dimensions = {
@@ -1067,7 +1092,7 @@ module "sqs_oldest_message_age" {
 }
 
 module "sqs_queue_depth" {
-  source              = "./modules/cloudwatch/cloudwatch-alarm"
+  source              = "../../modules/cloudwatch/cloudwatch-alarm"
   alarm_name          = "mediaconvert-sqs-queue-depth-${var.env}"
   comparison_operator = "GreaterThanThreshold"
   evaluation_periods  = "2"
@@ -1078,6 +1103,7 @@ module "sqs_queue_depth" {
   threshold           = "100"
   alarm_description   = "Alert when queue has too many messages"
   alarm_actions       = [module.alarm_notification.topic_arn]
+  ok_actions          = [module.alarm_notification.topic_arn]
   treat_missing_data  = "notBreaching"
 
   dimensions = {
@@ -1091,7 +1117,7 @@ module "sqs_queue_depth" {
 }
 
 module "dynamodb_read_throttles" {
-  source              = "./modules/cloudwatch/cloudwatch-alarm"
+  source              = "../../modules/cloudwatch/cloudwatch-alarm"
   alarm_name          = "mediaconvert-dynamodb-read-throttles-${var.env}"
   comparison_operator = "GreaterThanThreshold"
   evaluation_periods  = "2"
@@ -1102,6 +1128,7 @@ module "dynamodb_read_throttles" {
   threshold           = "5"
   alarm_description   = "Alert when DynamoDB reads are throttled"
   alarm_actions       = [module.alarm_notification.topic_arn]
+  ok_actions          = [module.alarm_notification.topic_arn]
   treat_missing_data  = "notBreaching"
 
   dimensions = {
@@ -1115,7 +1142,7 @@ module "dynamodb_read_throttles" {
 }
 
 module "dynamodb_write_throttles" {
-  source              = "./modules/cloudwatch/cloudwatch-alarm"
+  source              = "../../modules/cloudwatch/cloudwatch-alarm"
   alarm_name          = "mediaconvert-dynamodb-write-throttles-${var.env}"
   comparison_operator = "GreaterThanThreshold"
   evaluation_periods  = "2"
@@ -1126,6 +1153,7 @@ module "dynamodb_write_throttles" {
   threshold           = "5"
   alarm_description   = "Alert when DynamoDB writes are throttled"
   alarm_actions       = [module.alarm_notification.topic_arn]
+  ok_actions          = [module.alarm_notification.topic_arn]
   treat_missing_data  = "notBreaching"
 
   dimensions = {
@@ -1139,7 +1167,7 @@ module "dynamodb_write_throttles" {
 }
 
 module "dynamodb_system_errors" {
-  source              = "./modules/cloudwatch/cloudwatch-alarm"
+  source              = "../../modules/cloudwatch/cloudwatch-alarm"
   alarm_name          = "mediaconvert-dynamodb-system-errors-${var.env}"
   comparison_operator = "GreaterThanThreshold"
   evaluation_periods  = "1"
@@ -1164,7 +1192,7 @@ module "dynamodb_system_errors" {
 }
 
 module "dynamodb_consumed_read_capacity" {
-  source              = "./modules/cloudwatch/cloudwatch-alarm"
+  source              = "../../modules/cloudwatch/cloudwatch-alarm"
   alarm_name          = "mediaconvert-dynamodb-high-read-capacity-${var.env}"
   comparison_operator = "GreaterThanThreshold"
   evaluation_periods  = "2"
@@ -1175,6 +1203,7 @@ module "dynamodb_consumed_read_capacity" {
   threshold           = "16" # 80% of provisioned 20 units
   alarm_description   = "Alert when DynamoDB read capacity is high"
   alarm_actions       = [module.alarm_notification.topic_arn]
+  ok_actions          = [module.alarm_notification.topic_arn]
   treat_missing_data  = "notBreaching"
 
   dimensions = {
@@ -1188,7 +1217,7 @@ module "dynamodb_consumed_read_capacity" {
 }
 
 module "dynamodb_consumed_write_capacity" {
-  source              = "./modules/cloudwatch/cloudwatch-alarm"
+  source              = "../../modules/cloudwatch/cloudwatch-alarm"
   alarm_name          = "mediaconvert-dynamodb-high-write-capacity-${var.env}"
   comparison_operator = "GreaterThanThreshold"
   evaluation_periods  = "2"
@@ -1199,6 +1228,7 @@ module "dynamodb_consumed_write_capacity" {
   threshold           = "16" # 80% of provisioned 20 units
   alarm_description   = "Alert when DynamoDB write capacity is high"
   alarm_actions       = [module.alarm_notification.topic_arn]
+  ok_actions          = [module.alarm_notification.topic_arn]
   treat_missing_data  = "notBreaching"
 
   dimensions = {
@@ -1212,7 +1242,7 @@ module "dynamodb_consumed_write_capacity" {
 }
 
 module "cloudfront_5xx_error_rate" {
-  source              = "./modules/cloudwatch/cloudwatch-alarm"
+  source              = "../../modules/cloudwatch/cloudwatch-alarm"
   alarm_name          = "mediaconvert-cloudfront-5xx-errors-${var.env}"
   comparison_operator = "GreaterThanThreshold"
   evaluation_periods  = "2"
@@ -1223,6 +1253,7 @@ module "cloudfront_5xx_error_rate" {
   threshold           = "5" # 5% error rate
   alarm_description   = "Alert when CloudFront has high 5XX error rate"
   alarm_actions       = [module.alarm_notification.topic_arn]
+  ok_actions          = [module.alarm_notification.topic_arn]
   treat_missing_data  = "notBreaching"
 
   dimensions = {
@@ -1236,7 +1267,7 @@ module "cloudfront_5xx_error_rate" {
 }
 
 module "cloudfront_origin_latency" {
-  source              = "./modules/cloudwatch/cloudwatch-alarm"
+  source              = "../../modules/cloudwatch/cloudwatch-alarm"
   alarm_name          = "mediaconvert-cloudfront-origin-latency-${var.env}"
   comparison_operator = "GreaterThanThreshold"
   evaluation_periods  = "2"
@@ -1247,6 +1278,7 @@ module "cloudfront_origin_latency" {
   threshold           = "5000" # 5 seconds
   alarm_description   = "Alert when CloudFront origin latency is high"
   alarm_actions       = [module.alarm_notification.topic_arn]
+  ok_actions          = [module.alarm_notification.topic_arn]
   treat_missing_data  = "notBreaching"
 
   dimensions = {
@@ -1259,22 +1291,23 @@ module "cloudfront_origin_latency" {
   }
 }
 
-module "mediaconvert_job_failures" {
-  source              = "./modules/cloudwatch/cloudwatch-alarm"
-  alarm_name          = "mediaconvert-job-failures-${var.env}"
-  comparison_operator = "GreaterThanThreshold"
-  evaluation_periods  = "1"
-  metric_name         = "JobFailures"
-  namespace           = "MediaConvert"
-  period              = "300"
-  statistic           = "Sum"
-  threshold           = "3"
-  alarm_description   = "Alert when MediaConvert jobs fail"
-  alarm_actions       = [module.alarm_notification.topic_arn]
-  treat_missing_data  = "notBreaching"
+# module "mediaconvert_job_failures" {
+#   source              = "../../modules/cloudwatch/cloudwatch-alarm"
+#   alarm_name          = "mediaconvert-job-failures-${var.env}"
+#   comparison_operator = "GreaterThanThreshold"
+#   evaluation_periods  = "1"
+#   metric_name         = "JobFailures"
+#   namespace           = "MediaConvert"
+#   period              = "300"
+#   statistic           = "Sum"
+#   threshold           = "3"
+#   alarm_description   = "Alert when MediaConvert jobs fail"
+#   alarm_actions       = [module.alarm_notification.topic_arn]
+#   ok_actions          = [module.alarm_notification.topic_arn]
+#   treat_missing_data  = "notBreaching"
 
-  tags = {
-    Severity = "Critical"
-    Service  = "MediaConvert"
-  }
-}
+#   tags = {
+#     Severity = "Critical"
+#     Service  = "MediaConvert"
+#   }
+# }

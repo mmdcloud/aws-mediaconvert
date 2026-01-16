@@ -1,5 +1,9 @@
-infra/terraform/terraform.*
-infra/terraform/.terraform*
+infra/terraform/environments/prod/terraform.*
+infra/terraform/environments/prod/.terraform*
+infra/terraform/environments/dev/terraform.*
+infra/terraform/environments/dev/.terraform*
+infra/terraform/environments/staging/terraform.*
+infra/terraform/environments/staging/.terraform*
 tf-backup
 .gitignore
 src/frontend/node_modules
