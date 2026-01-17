@@ -189,7 +189,6 @@ resource "aws_lambda_event_source_mapping" "sqs_event_trigger" {
 # -------------------------------------------------------------------------
 # S3 Configuration
 # -------------------------------------------------------------------------
-# MediaConvert Source Bucket
 module "mediaconvert_source_bucket" {
   source             = "../../modules/s3"
   bucket_name        = "mediaconvert-src-${var.env}"
@@ -259,7 +258,7 @@ module "mediaconvert_function_code_bucket" {
   objects = [
     {
       key    = "convert_function.zip"
-      source = "./files/convert_function.zip"
+      source = "../../files/convert_function.zip"
     }
   ]
   versioning_enabled = "Enabled"
@@ -281,7 +280,7 @@ module "mediaconvert_get_presigned_url_function_code_bucket" {
   objects = [
     {
       key    = "get_presigned_url.zip"
-      source = "./files/get_presigned_url.zip"
+      source = "../../files/get_presigned_url.zip"
     }
   ]
   versioning_enabled = "Enabled"
@@ -303,7 +302,7 @@ module "mediaconvert_get_records_function_code_bucket" {
   objects = [
     {
       key    = "get_records.zip"
-      source = "./files/get_records.zip"
+      source = "../../files/get_records.zip"
     }
   ]
   versioning_enabled = "Enabled"
@@ -325,7 +324,7 @@ module "mediaconvert_api_authorizer_function_code_bucket" {
   objects = [
     {
       key    = "api_authorizer.zip"
-      source = "./files/api_authorizer.zip"
+      source = "../../files/api_authorizer.zip"
     }
   ]
   versioning_enabled = "Enabled"
