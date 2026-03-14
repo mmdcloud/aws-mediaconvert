@@ -11,4 +11,5 @@ resource "aws_sqs_queue" "queue" {
   #   deadLetterTargetArn = aws_sqs_queue.dlq.arn
   #   maxReceiveCount     = var.maxReceiveCount
   # })
+  tags = concat({},var.tags)
 }

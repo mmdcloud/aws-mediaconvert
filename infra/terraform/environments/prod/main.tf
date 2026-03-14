@@ -5,13 +5,12 @@ resource "random_id" "random" {
   byte_length = 8
 }
 
-
 # -------------------------------------------------------------------------
 # VPC Configuration
 # -------------------------------------------------------------------------
 module "vpc" {
   source                  = "../../modules/vpc"
-  vpc_name                = "vpc-${var.env}-${var.region}"
+  vpc_name                = "vpc-${var.env}"
   vpc_cidr                = "10.0.0.0/16"
   azs                     = var.azs
   public_subnets          = var.public_subnets
@@ -24,6 +23,8 @@ module "vpc" {
   single_nat_gateway      = true
   one_nat_gateway_per_az  = false
   tags = {
+    Name = "vpc-${var.env}-${var.region}"
+    ManagedBy = "terraform"
     Project = "mediaconvert"
   }
 }
@@ -40,6 +41,11 @@ module "mediaconvert_sns" {
       endpoint = var.notification_email
     }
   ]
+  tags = {
+    Name = "mediaconvert-job-status-change-topic-${var.env}"
+    ManagedBy = "terraform"
+    Project = "mediaconvert"
+  }
 }
 
 module "alarm_notification" {
@@ -51,6 +57,11 @@ module "alarm_notification" {
       endpoint = var.notification_email
     }
   ]
+  tags = {
+    Name = "mediaconvert-alarm-notifications-${var.env}"
+    ManagedBy = "terraform"
+    Project = "mediaconvert"
+  }
 }
 
 # -------------------------------------------------------------------------
@@ -70,6 +81,11 @@ module "mediaconvert_eventbridge_rule" {
   })
   target_id  = "MediaConvertJobStateChange"
   target_arn = module.mediaconvert_sns.topic_arn
+  tags = {
+    Name = "mediaconvert-job-state-change-rule-${var.env}"
+    ManagedBy = "terraform"
+    Project = "mediaconvert"
+  }
 }
 
 # -------------------------------------------------------------------------
@@ -95,6 +111,11 @@ module "mediaconvert_dynamodb" {
   write_capacity        = 20
   ttl_attribute_name    = "TimeToExist"
   ttl_attribute_enabled = true
+  tags = {
+    Name = "mediaconvert-records-${var.env}"
+    ManagedBy = "terraform"
+    Project = "mediaconvert"
+  }
 }
 
 # -------------------------------------------------------------------------
@@ -125,6 +146,11 @@ module "mediaconvert_process_sqs" {
       }
     ]
   })
+  tags = {
+    Name = "mediaconvert-process-queue-${var.env}"
+    ManagedBy = "terraform"
+    Project = "mediaconvert"
+  }
 }
 
 module "mediaconvert_process_dlq" {
@@ -137,6 +163,11 @@ module "mediaconvert_process_dlq" {
   visibility_timeout_seconds = 180
   receive_wait_time_seconds  = 20
   policy                     = ""
+  tags = {
+    Name = "mediaconvert-process-dlq-${var.env}"
+    ManagedBy = "terraform"
+    Project = "mediaconvert"
+  }
 }
 
 # -------------------------------------------------------------------------
@@ -175,6 +206,11 @@ module "cognito" {
       supported_identity_providers         = ["COGNITO"]
     }
   ]
+  tags = {
+    Name = "mediaconvert-users-${var.env}"
+    ManagedBy = "terraform"
+    Project = "mediaconvert"
+  }
 }
 
 #  Lambda SQS event source mapping
@@ -212,6 +248,11 @@ module "mediaconvert_source_bucket" {
     }
   ]
   force_destroy = true
+  tags = {
+    Name = "mediaconvert-src-${var.env}"
+    ManagedBy = "terraform"
+    Project = "mediaconvert"
+  }
 }
 
 # MediaConvert Destination Bucket
@@ -249,6 +290,11 @@ module "mediaconvert_destination_bucket" {
       }
     ]
   })
+  tags = {
+    Name = "mediaconvert-dest-${var.env}"
+    ManagedBy = "terraform"
+    Project = "mediaconvert"
+  }
 }
 
 # MediaConvert Function Code Bucket
@@ -271,6 +317,11 @@ module "mediaconvert_function_code_bucket" {
     }
   ]
   force_destroy = true
+  tags = {
+    Name = "mediaconvert-function-code-${var.env}"
+    ManagedBy = "terraform"
+    Project = "mediaconvert"
+  }
 }
 
 # MediaConvert Get Pre Signed Url Function Code Bucket
@@ -293,6 +344,11 @@ module "mediaconvert_get_presigned_url_function_code_bucket" {
     }
   ]
   force_destroy = true
+  tags = {
+    Name = "mediaconvert-get-presigned-url-function-code-${var.env}"
+    ManagedBy = "terraform"
+    Project = "mediaconvert"
+  }
 }
 
 # MediaConvert Get Records Function Code Bucket
@@ -315,6 +371,11 @@ module "mediaconvert_get_records_function_code_bucket" {
     }
   ]
   force_destroy = true
+  tags = {
+    Name = "mediaconvert-getrecords-code-${var.env}"
+    ManagedBy = "terraform"
+    Project = "mediaconvert"
+  }
 }
 
 # MediaConvert API Authorizer Function Code Bucket
@@ -337,6 +398,11 @@ module "mediaconvert_api_authorizer_function_code_bucket" {
     }
   ]
   force_destroy = true
+  tags = {
+    Name = "mediaconvert-apiauthorizer-code-${var.env}"
+    ManagedBy = "terraform"
+    Project = "mediaconvert"
+  }
 }
 
 # -------------------------------------------------------------------------
@@ -379,6 +445,11 @@ module "mediaconvert_iam_role" {
       ]
     }
     EOF
+    tags = {
+    Name = "mediaconvert-iam-role-${var.env}"
+    ManagedBy = "terraform"
+    Project = "mediaconvert"
+  }
 }
 
 # Lambda function IAM Role
@@ -483,6 +554,11 @@ module "mediaconvert_function_iam_role" {
       ]
     }
     EOF
+    tags = {
+    Name = "mediaconvert-function-iam-role-${var.env}"
+    ManagedBy = "terraform"
+    Project = "mediaconvert"
+  }
 }
 
 # -------------------------------------------------------------------------
@@ -505,6 +581,11 @@ module "mediaconvert_lambda_function" {
   runtime    = "python3.12"
   s3_bucket  = module.mediaconvert_function_code_bucket.bucket
   s3_key     = "convert_function.zip"
+  tags = {
+    Name = "mediaconvert-lambda-function-${var.env}"
+    ManagedBy = "terraform"
+    Project = "mediaconvert"
+  }
   depends_on = [module.mediaconvert_function_code_bucket]
 }
 
@@ -529,6 +610,11 @@ module "mediaconvert_get_presigned_url_function" {
   runtime    = "python3.12"
   s3_bucket  = module.mediaconvert_get_presigned_url_function_code_bucket.bucket
   s3_key     = "get_presigned_url.zip"
+  tags = {
+    Name = "mediaconvert-get-presigned-url-function-${var.env}"
+    ManagedBy = "terraform"
+    Project = "mediaconvert"
+  }
   depends_on = [module.mediaconvert_get_presigned_url_function_code_bucket]
 }
 
@@ -553,6 +639,11 @@ module "mediaconvert_get_records_function" {
   runtime    = "python3.12"
   s3_bucket  = module.mediaconvert_get_records_function_code_bucket.bucket
   s3_key     = "get_records.zip"
+  tags = {
+    Name = "mediaconvert-get-records-function-${var.env}"
+    ManagedBy = "terraform"
+    Project = "mediaconvert"
+  }
   depends_on = [module.mediaconvert_get_records_function_code_bucket]
 }
 
@@ -578,6 +669,11 @@ module "mediaconvert_api_authorizer_function" {
   runtime    = "python3.12"
   s3_bucket  = module.mediaconvert_api_authorizer_function_code_bucket.bucket
   s3_key     = "api_authorizer.zip"
+  tags = {
+    Name = "mediaconvert-api-authorizer-function-${var.env}"
+    ManagedBy = "terraform"
+    Project = "mediaconvert"
+  }
   depends_on = [module.mediaconvert_api_authorizer_function_code_bucket]
 }
 
@@ -615,81 +711,248 @@ module "mediaconvert_cloudfront_distribution" {
   cloudfront_default_certificate = true
   geo_restriction_type           = "none"
   query_string                   = true
+  tags = {
+    Name = "mediaconvert_cdn-${var.env}"
+    ManagedBy = "terraform"
+    Project = "mediaconvert"
+  }
 }
 
 # Next.js application bucket
-module "mediaconvert_frontend_bucket" {
-  source             = "../../modules/s3"
-  bucket_name        = "mediaconvert-frontend-${var.env}"
-  objects            = []
-  versioning_enabled = "Enabled"
-  bucket_notification = {
-    queue           = []
-    lambda_function = []
-  }
-  cors = [
-    {
-      allowed_headers = ["${module.mediaconvert_frontend_cloudfront_distribution.domain_name}"]
-      allowed_methods = ["GET"]
-      allowed_origins = ["*"]
-      max_age_seconds = 3000
-    }
-  ]
-  force_destroy = true
-  bucket_policy = jsonencode({
-    "Version" : "2012-10-17",
-    "Id" : "PolicyForCloudFrontPrivateContent",
-    "Statement" : [
+# module "mediaconvert_frontend_bucket" {
+#   source             = "../../modules/s3"
+#   bucket_name        = "mediaconvert-frontend-${var.env}"
+#   objects            = []
+#   versioning_enabled = "Enabled"
+#   bucket_notification = {
+#     queue           = []
+#     lambda_function = []
+#   }
+#   cors = [
+#     {
+#       allowed_headers = ["${module.mediaconvert_frontend_cloudfront_distribution.domain_name}"]
+#       allowed_methods = ["GET"]
+#       allowed_origins = ["*"]
+#       max_age_seconds = 3000
+#     }
+#   ]
+#   force_destroy = true
+#   bucket_policy = jsonencode({
+#     "Version" : "2012-10-17",
+#     "Id" : "PolicyForCloudFrontPrivateContent",
+#     "Statement" : [
+#       {
+#         "Sid" : "AllowCloudFrontServicePrincipal",
+#         "Effect" : "Allow",
+#         "Principal" : {
+#           "Service" : "cloudfront.amazonaws.com"
+#         },
+#         "Action" : "s3:GetObject",
+#         "Resource" : "${module.mediaconvert_frontend_bucket.arn}/*",
+#         "Condition" : {
+#           "StringEquals" : {
+#             "AWS:SourceArn" : "${module.mediaconvert_frontend_cloudfront_distribution.arn}"
+#           }
+#         }
+#       }
+#     ]
+#   })
+# }
+
+# # MediaConvert Cloudfront distribution
+# module "mediaconvert_frontend_cloudfront_distribution" {
+#   source                                = "../../modules/cloudfront"
+#   distribution_name                     = "mediaconvert_cdn_frontend-${var.env}"
+#   oac_name                              = "mediaconvert_cdn_frontend_oac-${var.env}"
+#   oac_description                       = "mediaconvert_cdn_frontend_oac-${var.env}"
+#   oac_origin_access_control_origin_type = "s3"
+#   oac_signing_behavior                  = "always"
+#   oac_signing_protocol                  = "sigv4"
+#   enabled                               = true
+#   origin = [
+#     {
+#       origin_id           = "mediaconvertfrontendorigin-${var.env}"
+#       domain_name         = "mediaconvertfrontendorigin-${var.env}.s3.${var.region}.amazonaws.com"
+#       connection_attempts = 3
+#       connection_timeout  = 10
+#     }
+#   ]
+#   compress                       = true
+#   smooth_streaming               = false
+#   target_origin_id               = "mediaconvertfrontendorigin-${var.env}"
+#   allowed_methods                = ["GET", "HEAD"]
+#   cached_methods                 = ["GET", "HEAD"]
+#   viewer_protocol_policy         = "redirect-to-https"
+#   min_ttl                        = 0
+#   default_ttl                    = 0
+#   max_ttl                        = 0
+#   price_class                    = "PriceClass_200"
+#   forward_cookies                = "all"
+#   cloudfront_default_certificate = true
+#   geo_restriction_type           = "none"
+#   query_string                   = true
+# }
+
+module "mediaconvert_frontend_container_registry" {
+  source               = "../../../modules/ecr"
+  force_delete         = true
+  scan_on_push         = false
+  image_tag_mutability = "IMMUTABLE"
+  bash_command         = "bash ${path.cwd}/../src/frontend/artifact_push.sh mediaconvert-frontend-${var.env}-${var.region} ${var.region} http://${module.mediaconvert_backend_lb.dns_name} ${module.mediaconvert_media_cloudfront_distribution.domain_name}"
+  name                 = "mediaconvert-frontend-${var.env}-${var.region}"
+  lifecycle_policy = jsonencode({
+    rules = [
       {
-        "Sid" : "AllowCloudFrontServicePrincipal",
-        "Effect" : "Allow",
-        "Principal" : {
-          "Service" : "cloudfront.amazonaws.com"
-        },
-        "Action" : "s3:GetObject",
-        "Resource" : "${module.mediaconvert_frontend_bucket.arn}/*",
-        "Condition" : {
-          "StringEquals" : {
-            "AWS:SourceArn" : "${module.mediaconvert_frontend_cloudfront_distribution.arn}"
-          }
+        rulePriority = 1
+        description  = "Keep last 10 images"
+        selection = {
+          tagStatus     = "tagged"
+          tagPrefixList = ["v"]
+          countType     = "imageCountMoreThan"
+          countNumber   = 10
+        }
+        action = {
+          type = "expire"
+        }
+      },
+      {
+        rulePriority = 2
+        description  = "Delete untagged images older than 7 days"
+        selection = {
+          tagStatus   = "untagged"
+          countType   = "sinceImagePushed"
+          countUnit   = "days"
+          countNumber = 7
+        }
+        action = {
+          type = "expire"
         }
       }
     ]
   })
+
+  # Uncomment only if KMS is needed
+
+  # encryption_type = "KMS"
+  # kms_key         = module.carshub_kms_ecr.key_id
 }
 
-# MediaConvert Cloudfront distribution
-module "mediaconvert_frontend_cloudfront_distribution" {
-  source                                = "../../modules/cloudfront"
-  distribution_name                     = "mediaconvert_cdn_frontend-${var.env}"
-  oac_name                              = "mediaconvert_cdn_frontend_oac-${var.env}"
-  oac_description                       = "mediaconvert_cdn_frontend_oac-${var.env}"
-  oac_origin_access_control_origin_type = "s3"
-  oac_signing_behavior                  = "always"
-  oac_signing_protocol                  = "sigv4"
-  enabled                               = true
-  origin = [
+module "ecs_task_execution_role" {
+  source             = "../../../modules/iam"
+  role_name          = "mediaconvert-ecs-task-execution-role-${var.env}-${var.region}"
+  role_description   = "IAM role for ECS task execution"
+  policy_name        = "mediaconvert-ecs-task-execution-policy-${var.env}-${var.region}"
+  policy_description = "IAM policy for ECS task execution"
+  assume_role_policy = <<EOF
     {
-      origin_id           = "mediaconvertfrontendorigin-${var.env}"
-      domain_name         = "mediaconvertfrontendorigin-${var.env}.s3.${var.region}.amazonaws.com"
-      connection_attempts = 3
-      connection_timeout  = 10
+        "Version": "2012-10-17",
+        "Statement": [
+            {
+                "Action": "sts:AssumeRole",
+                "Principal": {
+                  "Service": "ecs-tasks.amazonaws.com"
+                },
+                "Effect": "Allow",
+                "Sid": ""
+            }
+        ]
     }
-  ]
-  compress                       = true
-  smooth_streaming               = false
-  target_origin_id               = "mediaconvertfrontendorigin-${var.env}"
-  allowed_methods                = ["GET", "HEAD"]
-  cached_methods                 = ["GET", "HEAD"]
-  viewer_protocol_policy         = "redirect-to-https"
-  min_ttl                        = 0
-  default_ttl                    = 0
-  max_ttl                        = 0
-  price_class                    = "PriceClass_200"
-  forward_cookies                = "all"
-  cloudfront_default_certificate = true
-  geo_restriction_type           = "none"
-  query_string                   = true
+    EOF
+  policy             = <<EOF
+    {
+        "Version": "2012-10-17",
+        "Statement": [
+            {
+                "Action": [
+                  "s3:PutObject"
+                ],
+                "Resource": "*",
+                "Effect": "Allow"
+            }
+        ]
+    }
+    EOF
+}
+
+module "mediaconvert_cluster" {
+  source       = "terraform-aws-modules/ecs/aws"
+  cluster_name = "mediaconvert-ecs-cluster"
+  services = {
+    mediaconvert_frontend = {
+      cpu                    = 2048
+      memory                 = 4096
+      task_exec_iam_role_arn = module.ecs_task_execution_role.arn
+      iam_role_arn           = module.ecs_task_execution_role.arn
+      desired_count          = 2
+      assign_public_ip       = false
+      deployment_controller = {
+        type = "ECS"
+      }
+      network_mode = "awsvpc"
+      runtime_platform = {
+        cpu_architecture        = "X86_64"
+        operating_system_family = "LINUX"
+      }
+      launch_type              = "FARGATE"
+      scheduling_strategy      = "REPLICA"
+      requires_compatibilities = ["FARGATE"]
+      container_definitions = {
+        mediaconvert_frontend = {
+          cpu       = 1024
+          memory    = 2048
+          essential = true
+          image     = "${module.mediaconvert_frontend_container_registry.repository_url}:latest"
+          healthCheck = {
+            command = ["CMD-SHELL", "curl -f http://localhost:3000/auth/signin || exit 1"]
+          }
+          ulimits = [
+            {
+              name      = "nofile"
+              softLimit = 65536
+              hardLimit = 65536
+            }
+          ]
+          portMappings = [
+            {
+              name          = "mediaconvert_frontend"
+              containerPort = 3000
+              hostPort      = 3000
+              protocol      = "tcp"
+            }
+          ]
+          environment = []
+          readonlyRootFilesystem = false
+          logConfiguration = {
+            logConfiguration = {
+              logDriver = "awslogs"
+              options = {
+                awslogs-group         = module.mediaconvert_frontend_ecs_log_group.name
+                awslogs-region        = var.region
+                awslogs-stream-prefix = "mediaconvert-frontend"
+              }
+            }
+          }
+          memoryReservation = 100
+          restartPolicy = {
+            enabled              = true
+            ignoredExitCodes     = [1]
+            restartAttemptPeriod = 60
+          }
+        }
+      }
+      # load_balancer = {
+      #   service = {
+      #     target_group_arn = module.carshub_frontend_lb.target_groups["carshub_frontend_lb_target_group"].arn
+      #     container_name   = "ecs_frontend"
+      #     container_port   = 3000
+      #   }
+      # }
+      subnet_ids                    = module.vpc.private_subnets
+      vpc_id                        = module.vpc.vpc_id
+      security_group_ids            = [module.mediaconvert_ecs_frontend_sg.id]
+      availability_zone_rebalancing = "ENABLED"
+    }    
+  }
 }
 
 # -------------------------------------------------------------------------

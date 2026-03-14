@@ -15,6 +15,7 @@ resource "aws_lambda_function" "function" {
   environment {
     variables = var.env_variables
   }
+  tags = concat({},var.tags)
 }
 
 # Granting permissions for lambda

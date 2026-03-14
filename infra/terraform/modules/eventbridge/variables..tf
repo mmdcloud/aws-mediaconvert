@@ -3,3 +3,7 @@ variable "rule_description" {}
 variable "event_pattern" {}
 variable "target_arn" {}
 variable "target_id" {}
+variable "tags" {
+  type = map(string)
+  default = {}
+}

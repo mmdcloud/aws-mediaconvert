@@ -49,3 +49,7 @@ variable "price_class" {}
 variable "query_string" {}
 variable "forward_cookies" {}
 variable "geo_restriction_type" {}
+variable "tags" {
+  type = map(string)
+  default = {}
+}

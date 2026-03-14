@@ -12,3 +12,7 @@ variable "attributes" {
 }
 variable "ttl_attribute_name" {}
 variable "ttl_attribute_enabled" {}
+variable "tags" {
+  type = map(string)
+  default = {}
+}

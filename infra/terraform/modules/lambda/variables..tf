@@ -24,3 +24,7 @@ variable "dead_letter_config" {
   })
   default = null
 }
+variable "tags" {
+  type = map(string)
+  default = {}
+}

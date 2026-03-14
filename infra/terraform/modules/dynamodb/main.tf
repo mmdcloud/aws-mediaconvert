@@ -19,7 +19,5 @@ resource "aws_dynamodb_table" "mediaconvert-records" {
     enabled        = var.ttl_attribute_enabled
   }
 
-  tags = {
-    Name = var.name
-  }
+  tags = concat({},var.tags)
 }
