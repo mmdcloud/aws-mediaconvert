@@ -1,4 +1,4 @@
-# AWS MediaConvert Serverless Platform
+# 🚀 AWS MediaConvert Serverless Platform
 
 [![Terraform](https://img.shields.io/badge/Terraform-1.0%2B-623CE4?logo=terraform)](https://www.terraform.io/)
 [![AWS](https://img.shields.io/badge/AWS-Serverless-FF9900?logo=amazon-aws)](https://aws.amazon.com/)
