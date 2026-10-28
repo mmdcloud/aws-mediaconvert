@@ -1,5 +1,5 @@
 output "api_gateway_url" {
-  value = aws_api_gateway_deployment.mediaconvert_api_deployment.invoke_url
+  value = aws_api_gateway_stage.mediaconvert_api_stage.invoke_url
 }
 
 output "frontend_url" {
