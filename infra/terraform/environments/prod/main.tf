@@ -2,7 +2,7 @@
 # Random Provider Configuration
 # -------------------------------------------------------------------------
 resource "random_id" "random" {
-  byte_length = 8
+  byte_length = 4
 }
 
 # -------------------------------------------------------------------------
@@ -227,7 +227,7 @@ resource "aws_lambda_event_source_mapping" "sqs_event_trigger" {
 # -------------------------------------------------------------------------
 module "mediaconvert_source_bucket" {
   source             = "../../modules/s3"
-  bucket_name        = "mediaconvert-src-${var.env}"
+  bucket_name        = "mediaconvert-src-${var.env}-${random_id.random.hex}"
   objects            = []
   versioning_enabled = "Enabled"
   bucket_notification = {
@@ -249,7 +249,7 @@ module "mediaconvert_source_bucket" {
   ]
   force_destroy = true
   tags = {
-    Name      = "mediaconvert-src-${var.env}"
+    Name      = "mediaconvert-src-${var.env}-${random_id.random.hex}"
     ManagedBy = "terraform"
     Project   = "mediaconvert"
   }
@@ -258,7 +258,7 @@ module "mediaconvert_source_bucket" {
 # MediaConvert Destination Bucket
 module "mediaconvert_destination_bucket" {
   source             = "../../modules/s3"
-  bucket_name        = "mediaconvert-dest-${var.env}"
+  bucket_name        = "mediaconvert-dest-${var.env}-${random_id.random.hex}"
   objects            = []
   versioning_enabled = "Enabled"
   cors = [
@@ -291,7 +291,7 @@ module "mediaconvert_destination_bucket" {
     ]
   })
   tags = {
-    Name      = "mediaconvert-dest-${var.env}"
+    Name      = "mediaconvert-dest-${var.env}-${random_id.random.hex}"
     ManagedBy = "terraform"
     Project   = "mediaconvert"
   }
@@ -300,7 +300,7 @@ module "mediaconvert_destination_bucket" {
 # MediaConvert Function Code Bucket
 module "mediaconvert_function_code_bucket" {
   source      = "../../modules/s3"
-  bucket_name = "mediaconvert-function-code-${var.env}"
+  bucket_name = "mediaconvert-func-code-${var.env}-${random_id.random.hex}"
   objects = [
     {
       key    = "convert_function.zip"
@@ -318,7 +318,7 @@ module "mediaconvert_function_code_bucket" {
   ]
   force_destroy = true
   tags = {
-    Name      = "mediaconvert-function-code-${var.env}"
+    Name      = "mediaconvert-func-code-${var.env}-${random_id.random.hex}"
     ManagedBy = "terraform"
     Project   = "mediaconvert"
   }
@@ -327,7 +327,7 @@ module "mediaconvert_function_code_bucket" {
 # MediaConvert Get Pre Signed Url Function Code Bucket
 module "mediaconvert_get_presigned_url_function_code_bucket" {
   source      = "../../modules/s3"
-  bucket_name = "mediaconvert-get-presigned-url-function-code-${var.env}"
+  bucket_name = "mediaconvert-presign-code-${var.env}-${random_id.random.hex}"
   objects = [
     {
       key    = "get_presigned_url.zip"
@@ -345,7 +345,7 @@ module "mediaconvert_get_presigned_url_function_code_bucket" {
   ]
   force_destroy = true
   tags = {
-    Name      = "mediaconvert-get-presigned-url-function-code-${var.env}"
+    Name      = "mediaconvert-presign-code-${var.env}-${random_id.random.hex}"
     ManagedBy = "terraform"
     Project   = "mediaconvert"
   }
@@ -354,7 +354,7 @@ module "mediaconvert_get_presigned_url_function_code_bucket" {
 # MediaConvert Get Records Function Code Bucket
 module "mediaconvert_get_records_function_code_bucket" {
   source      = "../../modules/s3"
-  bucket_name = "mediaconvert-getrecords-code-${var.env}"
+  bucket_name = "mediaconvert-records-code-${var.env}-${random_id.random.hex}"
   objects = [
     {
       key    = "get_records.zip"
@@ -372,7 +372,7 @@ module "mediaconvert_get_records_function_code_bucket" {
   ]
   force_destroy = true
   tags = {
-    Name      = "mediaconvert-getrecords-code-${var.env}"
+    Name      = "mediaconvert-records-code-${var.env}-${random_id.random.hex}"
     ManagedBy = "terraform"
     Project   = "mediaconvert"
   }
@@ -381,7 +381,7 @@ module "mediaconvert_get_records_function_code_bucket" {
 # MediaConvert API Authorizer Function Code Bucket
 module "mediaconvert_api_authorizer_function_code_bucket" {
   source      = "../../modules/s3"
-  bucket_name = "mediaconvert-apiauthorizer-code-${var.env}"
+  bucket_name = "mediaconvert-authorizer-code-${var.env}-${random_id.random.hex}"
   objects = [
     {
       key    = "api_authorizer.zip"
@@ -399,7 +399,7 @@ module "mediaconvert_api_authorizer_function_code_bucket" {
   ]
   force_destroy = true
   tags = {
-    Name      = "mediaconvert-apiauthorizer-code-${var.env}"
+    Name      = "mediaconvert-authorizer-code-${var.env}-${random_id.random.hex}"
     ManagedBy = "terraform"
     Project   = "mediaconvert"
   }
@@ -726,7 +726,7 @@ module "mediaconvert_cloudfront_distribution" {
 # Next.js application bucket
 module "mediaconvert_frontend_bucket" {
   source             = "../../modules/s3"
-  bucket_name        = "mediaconvert-frontend-${var.env}"
+  bucket_name        = "mediaconvert-frontend-${var.env}-${random_id.random.hex}"
   objects            = []
   versioning_enabled = "Enabled"
   bucket_notification = {
@@ -763,7 +763,7 @@ module "mediaconvert_frontend_bucket" {
     ]
   })
   tags = {
-    Name      = "mediaconvert-frontend-${var.env}"
+    Name      = "mediaconvert-frontend-${var.env}-${random_id.random.hex}"
     ManagedBy = "terraform"
     Project   = "mediaconvert"
   }
