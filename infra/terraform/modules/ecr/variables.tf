@@ -14,18 +14,18 @@ variable "bash_command" {
   type = string
 }
 variable "lifecycle_policy" {
-  type = string
+  type    = string
   default = null
 }
 variable "encryption_type" {
-  type = string
+  type    = string
   default = null
 }
 variable "kms_key" {
-  type = string
+  type    = string
   default = null
 }
 variable "tags" {
-  type = map(string)
+  type    = map(string)
   default = {}
 }

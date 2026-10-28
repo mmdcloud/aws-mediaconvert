@@ -1,8 +1,8 @@
 # Cloudwatch Log Group
 resource "aws_cloudwatch_log_group" "log_group" {
-  name = var.log_group_name
+  name              = var.log_group_name
   retention_in_days = var.retention_in_days
-  skip_destroy = var.skip_destroy
+  skip_destroy      = var.skip_destroy
   tags = {
     Name = var.log_group_name
   }

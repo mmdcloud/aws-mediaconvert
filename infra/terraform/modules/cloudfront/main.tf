@@ -9,7 +9,8 @@ resource "aws_cloudfront_origin_access_control" "origin_access_control" {
 
 # Configuring cloudfront distribution configuration
 resource "aws_cloudfront_distribution" "distribution" {
-  enabled = var.enabled
+  enabled             = var.enabled
+  default_root_object = var.default_root_object
   dynamic "origin" {
     for_each = var.origin
     content {
@@ -46,5 +47,5 @@ resource "aws_cloudfront_distribution" "distribution" {
     cloudfront_default_certificate = var.cloudfront_default_certificate
   }
   price_class = var.price_class
-  tags = var.tags
+  tags        = var.tags
 }

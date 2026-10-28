@@ -15,30 +15,30 @@ variable "oac_signing_protocol" {
 }
 variable "enabled" {}
 variable "distribution_name" {
-  
+
 }
 variable "origin" {
   type = list(object({
-    origin_id                = string
-    domain_name              = string
-    connection_attempts      = number
-    connection_timeout       = number
+    origin_id           = string
+    domain_name         = string
+    connection_attempts = number
+    connection_timeout  = number
   }))
 }
 variable "compress" {
-    type = bool
+  type = bool
 }
 variable "smooth_streaming" {
-    type = bool
+  type = bool
 }
 variable "target_origin_id" {
-    type = string
+  type = string
 }
 variable "allowed_methods" {
-    type = list(string)
+  type = list(string)
 }
 variable "cached_methods" {
-    type = list(string)
+  type = list(string)
 }
 variable "viewer_protocol_policy" {}
 variable "min_ttl" {}
@@ -49,7 +49,11 @@ variable "price_class" {}
 variable "query_string" {}
 variable "forward_cookies" {}
 variable "geo_restriction_type" {}
+variable "default_root_object" {
+  type    = string
+  default = null
+}
 variable "tags" {
-  type = map(string)
+  type    = map(string)
   default = {}
 }

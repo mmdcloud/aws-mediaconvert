@@ -7,12 +7,12 @@ resource "aws_cloudwatch_metric_alarm" "alarm" {
   period              = var.period
   statistic           = var.statistic
   threshold           = var.threshold
-  alarm_description   = var.alarm_description 
+  alarm_description   = var.alarm_description
   alarm_actions       = var.alarm_actions
   ok_actions          = var.ok_actions
-  dimensions = var.dimensions
-  treat_missing_data = var.treat_missing_data
-  tags = merge(var.tags,{
+  dimensions          = var.dimensions
+  treat_missing_data  = var.treat_missing_data
+  tags = merge(var.tags, {
     Name = var.alarm_name
   })
 }

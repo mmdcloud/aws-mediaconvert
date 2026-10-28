@@ -6,6 +6,8 @@ resource "aws_lambda_function" "function" {
   runtime       = var.runtime
   s3_bucket     = var.s3_bucket
   s3_key        = var.s3_key
+  timeout       = var.timeout
+  memory_size   = var.memory_size
   dynamic "dead_letter_config" {
     for_each = var.dead_letter_config != null ? [var.dead_letter_config] : []
     content {

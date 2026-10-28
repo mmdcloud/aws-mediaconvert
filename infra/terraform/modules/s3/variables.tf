@@ -38,6 +38,6 @@ variable "bucket_notification" {
   }
 }
 variable "tags" {
-  type = map(string)
+  type    = map(string)
   default = {}
 }

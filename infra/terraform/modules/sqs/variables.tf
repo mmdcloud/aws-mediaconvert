@@ -7,6 +7,6 @@ variable "receive_wait_time_seconds" {}
 variable "maxReceiveCount" {}
 variable "policy" {}
 variable "tags" {
-  type = map(string)
+  type    = map(string)
   default = {}
 }

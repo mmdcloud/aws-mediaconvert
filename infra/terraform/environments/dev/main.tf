@@ -902,5 +902,5 @@ resource "aws_api_gateway_deployment" "mediaconvert_api_deployment" {
 resource "aws_api_gateway_stage" "mediaconvert_api_stage" {
   deployment_id = aws_api_gateway_deployment.mediaconvert_api_deployment.id
   rest_api_id   = aws_api_gateway_rest_api.mediaconvert_rest_api.id
-  stage_name    = "${var.env}"
+  stage_name    = var.env
 }

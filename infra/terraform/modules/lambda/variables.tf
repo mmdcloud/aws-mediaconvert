@@ -12,9 +12,9 @@ variable "env_variables" {
 variable "permissions" {
   type = list(object({
     statement_id = string
-    action = string
-    principal = string
-    source_arn = string
+    action       = string
+    principal    = string
+    source_arn   = string
   }))
   default = []
 }
@@ -24,7 +24,15 @@ variable "dead_letter_config" {
   })
   default = null
 }
+variable "timeout" {
+  type    = number
+  default = 30
+}
+variable "memory_size" {
+  type    = number
+  default = 256
+}
 variable "tags" {
-  type = map(string)
+  type    = map(string)
   default = {}
 }

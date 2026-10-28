@@ -263,7 +263,7 @@ module "mediaconvert_destination_bucket" {
   versioning_enabled = "Enabled"
   cors = [
     {
-      allowed_headers = ["${module.mediaconvert_cloudfront_distribution.domain_name}"]
+      allowed_headers = ["*"]
       allowed_methods = ["GET"]
       allowed_origins = ["*"]
       max_age_seconds = 3000
@@ -438,7 +438,9 @@ module "mediaconvert_iam_role" {
                 "s3:*"
             ],
             "Resource": [
+              "${module.mediaconvert_source_bucket.arn}",
               "${module.mediaconvert_source_bucket.arn}/*",
+              "${module.mediaconvert_destination_bucket.arn}",
               "${module.mediaconvert_destination_bucket.arn}/*"
             ]
         }
@@ -493,7 +495,9 @@ module "mediaconvert_function_iam_role" {
               "Action": [
                   "mediaconvert:*",
                   "s3:ListAllMyBuckets",
-                  "s3:ListBucket"
+                  "s3:ListBucket",
+                  "s3:GetObject",
+                  "s3:PutObject"
               ],
               "Resource": "*"
           },
@@ -568,6 +572,7 @@ module "mediaconvert_lambda_function" {
   source        = "../../modules/lambda"
   function_name = "mediaconvert-lambda-function-${var.env}"
   role_arn      = module.mediaconvert_function_iam_role.arn
+  timeout       = 180
   env_variables = {
     REGION            = var.region
     DestinationBucket = "${module.mediaconvert_destination_bucket.bucket}"
@@ -691,15 +696,15 @@ module "mediaconvert_cloudfront_distribution" {
   enabled                               = true
   origin = [
     {
-      origin_id           = "mediaconvertdestmadmax-${var.env}"
-      domain_name         = "mediaconvertdestmadmax-${var.env}.s3.${var.region}.amazonaws.com"
+      origin_id           = module.mediaconvert_destination_bucket.bucket
+      domain_name         = module.mediaconvert_destination_bucket.bucket_regional_domain_name
       connection_attempts = 3
       connection_timeout  = 10
     }
   ]
   compress                       = true
   smooth_streaming               = false
-  target_origin_id               = "mediaconvertdestmadmax-${var.env}"
+  target_origin_id               = module.mediaconvert_destination_bucket.bucket
   allowed_methods                = ["GET", "HEAD"]
   cached_methods                 = ["GET", "HEAD"]
   viewer_protocol_policy         = "redirect-to-https"
@@ -730,7 +735,7 @@ module "mediaconvert_frontend_bucket" {
   }
   cors = [
     {
-      allowed_headers = ["${module.mediaconvert_frontend_cloudfront_distribution.domain_name}"]
+      allowed_headers = ["*"]
       allowed_methods = ["GET"]
       allowed_origins = ["*"]
       max_age_seconds = 3000
@@ -774,17 +779,18 @@ module "mediaconvert_frontend_cloudfront_distribution" {
   oac_signing_behavior                  = "always"
   oac_signing_protocol                  = "sigv4"
   enabled                               = true
+  default_root_object                   = "index.html"
   origin = [
     {
-      origin_id           = "mediaconvertfrontendorigin-${var.env}"
-      domain_name         = "mediaconvertfrontendorigin-${var.env}.s3.${var.region}.amazonaws.com"
+      origin_id           = module.mediaconvert_frontend_bucket.bucket
+      domain_name         = module.mediaconvert_frontend_bucket.bucket_regional_domain_name
       connection_attempts = 3
       connection_timeout  = 10
     }
   ]
   compress                       = true
   smooth_streaming               = false
-  target_origin_id               = "mediaconvertfrontendorigin-${var.env}"
+  target_origin_id               = module.mediaconvert_frontend_bucket.bucket
   allowed_methods                = ["GET", "HEAD"]
   cached_methods                 = ["GET", "HEAD"]
   viewer_protocol_policy         = "redirect-to-https"
@@ -993,7 +999,7 @@ resource "aws_api_gateway_integration" "mediaconvert_resource_api_get_presigned_
   rest_api_id             = aws_api_gateway_rest_api.mediaconvert_rest_api.id
   resource_id             = aws_api_gateway_resource.mediaconvert_resource_api.id
   http_method             = aws_api_gateway_method.mediaconvert_resource_api_get_presigned_url_method.http_method
-  integration_http_method = "ANY"
+  integration_http_method = "POST"
   type                    = "AWS_PROXY"
   uri                     = module.mediaconvert_get_presigned_url_function.invoke_arn
 }
@@ -1036,7 +1042,7 @@ resource "aws_api_gateway_integration" "mediaconvert_resource_api_get_records_me
   rest_api_id             = aws_api_gateway_rest_api.mediaconvert_rest_api.id
   resource_id             = aws_api_gateway_resource.mediaconvert_get_records_api.id
   http_method             = aws_api_gateway_method.mediaconvert_resource_api_get_records_method.http_method
-  integration_http_method = "ANY"
+  integration_http_method = "POST"
   type                    = "AWS_PROXY"
   uri                     = module.mediaconvert_get_records_function.invoke_arn
 }

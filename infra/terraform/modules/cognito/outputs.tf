@@ -11,5 +11,5 @@ output "user_pool_arn" {
 }
 
 output "client_ids" {
-  value = [for client in aws_cognito_user_pool_client.user_pool_client : client.id]  
+  value = [for client in aws_cognito_user_pool_client.user_pool_client : client.id]
 }
